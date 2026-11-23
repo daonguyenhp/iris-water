@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="vi" data-lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hướng dẫn &amp; Hỏi đáp — Iris Water / Guide &amp; FAQs</title>
+  <meta name="description" content="Hướng dẫn sử dụng và giải đáp thắc mắc hệ thống giám sát bể xử lý nước thải Iris Water.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="logo.png?v=20261123_momo3">
+  <style>
+    :root {
+      --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-display: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+      --bg-canvas: #ffffff;
+      --bg-surface: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --brand: #0066cc;
+      --brand-soft: #eff6ff;
+      --brand-border: #bfdbfe;
+      --radius-lg: 24px;
+      --container-max: 1220px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+      background-color: var(--bg-canvas);
+      min-height: 100vh;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    html[data-lang="en"] .vi { display: none !important; }
+    html[data-lang="vi"] .en, html:not([data-lang="en"]) .en { display: none !important; }
+
+    a { color: var(--brand); text-decoration: none; }
+    .wrap { max-width: var(--container-max); width: calc(100% - 48px); margin: 0 auto; }
+
+    /* Topbar MoMo Careers style */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #f1f5f9;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.03);
+    }
+    .topbar-inner {
+      height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: inherit;
+    }
+    .stacked-logo {
+      display: grid;
+      grid-template-columns: repeat(2, auto);
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 22px;
+      line-height: 0.84;
+      letter-spacing: -0.04em;
+      color: var(--brand);
+      text-transform: lowercase;
+      user-select: none;
+    }
+    .stacked-logo span { display: block; }
+    .brand-outline-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 15px;
+      border: 1.5px solid #93c5fd;
+      border-radius: 10px;
+      font-family: var(--font-display);
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #334155;
+      background: #ffffff;
+      line-height: 1.2;
+    }
+    .topbar-nav-links {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .clean-nav-link {
+      border: none;
+      background: transparent;
+      font-family: var(--font-display);
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #27272a;
+      cursor: pointer;
+      padding: 6px 0;
+      border-bottom: 2px solid transparent;
+      transition: color 0.18s ease, border-color 0.18s ease;
+    }
+    .clean-nav-link:hover,
+    .clean-nav-link.active {
+      color: var(--brand);
+    }
+    .clean-nav-link.active {
+      border-bottom-color: var(--brand);
+    }
+
+    /* MoMo 2-Column Split Layout */
+    .momo-faq-section {
+      padding: 76px 0 100px;
+    }
+    .momo-faq-split {
+      display: grid;
+      grid-template-columns: 0.36fr 0.64fr;
+      gap: 64px;
+      align-items: flex-start;
+    }
+    @media (max-width: 960px) {
+      .momo-faq-split {
+        grid-template-columns: 1fr;
+        gap: 36px;
+      }
+    }
+    .momo-faq-left {
+      position: sticky;
+      top: 112px;
+    }
+    @media (max-width: 960px) {
+      .momo-faq-left {
+        position: static;
+      }
+    }
+    .momo-faq-left h1 {
+      font-family: var(--font-display);
+      font-size: clamp(28px, 3.6vw, 40px);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.18;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+    .momo-faq-left p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.68;
+      margin-bottom: 28px;
+    }
+    .btn-outline-brand {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      border: 1.5px solid var(--brand);
+      border-radius: 12px;
+      color: var(--brand);
+      background: #ffffff;
+      font-family: var(--font-display);
+      font-size: 14.5px;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .btn-outline-brand:hover {
+      background: var(--brand);
+      color: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px -6px rgba(0, 102, 204, 0.35);
+    }
+
+    .momo-accordion-list {
+      width: 100%;
+    }
+    .momo-acc-item {
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .momo-acc-trigger {
+      width: 100%;
+      border: none;
+      background: transparent;
+      padding: 22px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      text-align: left;
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: color 0.18s ease;
+    }
+    .momo-acc-trigger:hover,
+    .momo-acc-item.open .momo-acc-trigger {
+      color: var(--brand);
+    }
+    .momo-acc-chevron {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      color: #475569;
+      transition: transform 0.24s ease, color 0.18s ease;
+    }
+    .momo-acc-item.open .momo-acc-chevron {
+      transform: rotate(180deg);
+      color: var(--brand);
+    }
+    .momo-acc-panel {
+      display: none;
+      padding: 0 0 24px 0;
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.72;
+    }
+    .momo-acc-item.open .momo-acc-panel {
+      display: block;
+    }
+    .momo-acc-panel ul {
+      margin: 10px 0 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cmd-pill-box {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      margin-top: 14px;
+      display: block;
+      width: 100%;
+      overflow-x: auto;
+    }
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 36px 0 76px;
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* Sticky Bottom Translucent CTA Bar (See-through tint, readable text underneath) */
+    .sticky-bottom-cta-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 95;
+      height: 46px;
+      background: rgba(219, 234, 254, 0.34);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-top: 1px solid rgba(147, 197, 253, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .btn-try-it-now {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 102, 204, 0.85);
+      color: #ffffff;
+      font-family: var(--font-display);
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 7px 18px;
+      border-radius: 7px;
+      box-shadow: 0 3px 10px -2px rgba(0, 102, 204, 0.24);
+      transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .btn-try-it-now:hover {
+      background: #0066cc;
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px -4px rgba(0, 102, 204, 0.42);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="/">
+        <div class="stacked-logo" aria-label="IRIS">
+          <span>ir</span>
+          <span>is</span>
+        </div>
+        <span class="brand-outline-badge">
+          <span class="vi">Nước thải</span>
+          <span class="en">Wastewater</span>
+        </span>
+      </a>
+      <nav class="topbar-nav-links">
+        <a class="clean-nav-link" href="/">
+          <span class="vi">Trang chủ</span>
+          <span class="en">Home</span>
+        </a>
+        <a class="clean-nav-link active" href="/huong-dan.html">
+          <span class="vi">Hướng dẫn &amp; Hỏi đáp</span>
+          <span class="en">Guide &amp; FAQs</span>
+        </a>
+        <a class="clean-nav-link" href="/app">
+          <span class="vi">Màn hình giám sát</span>
+          <span class="en">Live Console</span>
+        </a>
+        <button type="button" class="clean-nav-link" id="btn-guide-lang">
+          <span class="vi">EN</span>
+          <span class="en">VI</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="momo-faq-section">
+      <div class="momo-faq-split">
+
+        <!-- Cột trái giống hệt mẫu Got questions about MoMo Talent? -->
+        <div class="momo-faq-left">
+          <h1>
+            <span class="vi">Cần hướng dẫn hoặc có thắc mắc về Iris Water?</span>
+            <span class="en">Need guidance or got questions about Iris Water?</span>
+          </h1>
+          <p>
+            <span class="vi">Chúng tôi đã tổng hợp trọn bộ các bước khởi động phần mềm, cách xem màn hình theo dõi bể, cách nối camera và giải đáp các câu hỏi thường gặp ngay bên cạnh. Bấm vào từng dòng để xem chi tiết!</span>
+            <span class="en">We've gathered all startup steps, screen instructions, camera connection guides, and frequently asked questions right here. Click any item to expand!</span>
+          </p>
+          <a class="btn-outline-brand" href="/app">
+            <span class="vi">Mở màn hình giám sát ngay</span>
+            <span class="en">Open Live Console now</span>
+          </a>
+        </div>
+
+        <!-- Cột phải: Danh sách accordion gọn gàng có mũi tên v -->
+        <div class="momo-accordion-list">
+
+          <div class="momo-acc-item open">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Làm sao để bật phần mềm và xem thử video bể mẫu trong 30 giây?</span>
+                <span class="en">How do I start the software and play the sample basin video in 30 seconds?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Bạn không cần gắn camera thật ngay từ đầu, chỉ cần làm theo 3 bước đơn giản sau:</span>
+                <span class="en">No physical camera is required upfront—just follow these 3 quick steps:</span>
+              </p>
+              <ul>
+                <li>
+                  <span class="vi"><strong>Bước 1:</strong> Nhấp đúp chuột vào tệp <code>2_Chay_He_Thong.bat</code> trong thư mục dự án hoặc chạy dòng lệnh bên dưới.</span>
+                  <span class="en"><strong>Step 1:</strong> Double-click <code>2_Chay_He_Thong.bat</code> in the project folder or run the command below.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Bước 2:</strong> Mở trình duyệt vào địa chỉ <code>http://localhost:8000/app</code> hoặc bấm nút <strong>Màn hình giám sát</strong>.</span>
+                  <span class="en"><strong>Step 2:</strong> Open <code>http://localhost:8000/app</code> in your browser or click <strong>Live Console</strong>.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Bước 3:</strong> Bấm nút <strong>Chạy video bể mẫu</strong> ngay phía trên khung hình camera để xem phần mềm tự động đo lượng bọt, màu nước và độ trong sau mỗi 2 giây.</span>
+                  <span class="en"><strong>Step 3:</strong> Click <strong>Run Sample Video</strong> above the camera frame to watch live foam, water color, and clarity readings update every 2 seconds.</span>
+                </li>
+              </ul>
+              <div class="cmd-pill-box">.\.venv\Scripts\python.exe main.py --no-gui</div>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Màn hình giám sát gồm những mục nào và cách xem ra sao?</span>
+                <span class="en">What are the 5 tabs on the monitoring screen and how do I use them?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Mỗi khi bấm vào một mục trên thanh menu trên cùng, màn hình chỉ hiện đúng mục đó cho gọn:</span>
+                <span class="en">Clicking any item on the top menu displays only that screen to keep things clean:</span>
+              </p>
+              <ul>
+                <li>
+                  <span class="vi"><strong>Trực mặt bể:</strong> Xem video trực tiếp, bấm <em>Tô màu vùng bọt</em> để thấy phần mềm đánh dấu lớp bọt và rác nổi, xem thanh đo bọt và cột hướng dẫn xử lý bên phải.</span>
+                  <span class="en"><strong>Live Basin:</strong> Watch live video, switch to <em>Foam Highlight</em> to see tinted foam and boxed trash, check the foam bar, and read action tips on the right.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Bể Hóa lý &amp; Bể Sinh học:</strong> Xem chi tiết từng chỉ số của từng bể và nhập tốc độ máy khuấy, lượng oxy hoặc độ pH của nước.</span>
+                  <span class="en"><strong>Physicochemical &amp; Biological:</strong> Check detailed cards for each basin and enter mixer speed, oxygen, or pH readings.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Kiểm tra ảnh &amp; video / Nhật ký cảnh báo:</strong> Tải bất kỳ ảnh hoặc video mặt bể từ máy tính lên để kiểm tra ngay, hoặc xem lại lịch sử các lần báo động kèm ảnh chụp.</span>
+                  <span class="en"><strong>File Analyzer &amp; Alert Logbook:</strong> Upload any saved basin photo or video for instant analysis, or review past alert snapshots.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Làm thế nào để kết nối Camera USB hoặc Camera mạng trong nhà máy?</span>
+                <span class="en">How do I connect a USB camera or plant network IP camera?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Tại màn hình <strong>Trực mặt bể</strong>, bạn bấm vào nút <strong>Chọn nguồn camera</strong> ở góc trên khung video:</span>
+                <span class="en">On the <strong>Live Basin</strong> screen, click <strong>Video Source</strong> above the video frame:</span>
+              </p>
+              <ul>
+                <li>
+                  <span class="vi"><strong>Với Camera cắm dây USB:</strong> Chọn loại nguồn là <em>Camera cắm cổng USB</em>, bấm nút quét tìm thiết bị rồi bấm <strong>Kết nối nguồn này</strong>.</span>
+                  <span class="en"><strong>For USB Cameras:</strong> Choose <em>USB Camera</em>, click Scan to find the device, then click <strong>Connect</strong>.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Với Camera mạng nhà máy:</strong> Chọn <em>Camera mạng nhà máy</em> rồi bấm nút quét mạng nội bộ để phần mềm tự tìm các camera Hikvision, Dahua, Imou, EZVIZ đang lắp tại bể.</span>
+                  <span class="en"><strong>For Plant IP Cameras:</strong> Choose <em>Plant IP Camera</em> and click Scan LAN to automatically discover Hikvision, Dahua, Imou, or EZVIZ cameras.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Làm sao để nhận tin nhắn kèm ảnh cảnh báo qua điện thoại?</span>
+                <span class="en">How can I receive alert messages with basin photos on my phone?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Bạn mở mục <strong>Cài đặt</strong> ở góc phải trên cùng của màn hình giám sát, bật công tắc nhận cảnh báo qua <strong>Telegram</strong>, dán mã Bot của bạn vào rồi bấm nút tự động lấy mã phòng chat. Mỗi khi lượng bọt hoặc chất lượng nước vượt ngưỡng, hệ thống sẽ tự gửi ảnh chụp mặt bể về điện thoại.</span>
+                <span class="en">Open <strong>Settings</strong> in the top-right corner of the console, turn on <strong>Telegram</strong> notifications, paste your Bot token, and click auto-detect chat ID. Whenever foam or water quality breaches thresholds, a basin snapshot is sent to your phone.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Khi nào hệ thống báo mức Chú ý 25% và Báo động 40% về lượng bọt?</span>
+                <span class="en">When does the system trigger the 25% Warning and 40% Alarm for surface foam?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Phần mềm tự động nhận diện vùng bọt trắng nổi trên mặt bể rồi tính xem lớp bọt chiếm bao nhiêu phần trăm diện tích mặt nước. Khi bọt phủ trên <strong>25%</strong> mặt bể, hệ thống nhắc chú ý theo dõi; khi vượt quá <strong>40%</strong> sẽ phát cảnh báo đỏ để người trực xử lý ngay.</span>
+                <span class="en">The software detects white floating foam and calculates how much of the water surface it covers. Above <strong>25%</strong> triggers a warning; above <strong>40%</strong> triggers an alarm for immediate operator action.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Trời nắng gắt hoặc râm mát có làm phần mềm nhìn sai màu nước không?</span>
+                <span class="en">Does bright sunlight or cloudy weather confuse the water color check?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Không bị ảnh hưởng. Trước khi đọc màu nước, phần mềm tự động cân bằng lại độ sáng để loại bỏ ánh nắng chói hoặc bóng râm, nhờ đó phân biệt chính xác nước xanh trong, vàng đục hay nâu bùn vào bất kỳ thời điểm nào trong ngày.</span>
+                <span class="en">No. Before reading water color, the software automatically balances brightness to remove glare or shadows, accurately distinguishing clear green, murky yellow, or muddy brown water all day.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Tại sao nên nhập thêm tốc độ máy khuấy, lượng oxy và độ pH của bể?</span>
+                <span class="en">Why enter mixer speed, water oxygen, and pH levels into the screen?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Vì kết hợp hình ảnh camera với số đo tại bể sẽ tìm ra đúng nguyên nhân sự cố. Ví dụ: thấy mặt bể ít bọt khí mà lượng oxy trong nước cũng thấp thì phần mềm biết ngay máy sục khí đang yếu có thể làm chết vi sinh; ngược lại bọt quá dày mà oxy cao thì nhắc bạn giảm máy sục khí để tiết kiệm điện.</span>
+                <span class="en">Combining camera visuals with basin readings pinpoints the true cause. Few surface bubbles plus low oxygen warns that weak aeration may suffocate microbes, while thick foam plus high oxygen suggests lowering blower speed to save electricity.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Tôi có thể tải ảnh hoặc video quay sẵn lên để kiểm tra thử không?</span>
+                <span class="en">Can I upload my own saved basin photos or videos to test the system?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Hoàn toàn được. Bạn chỉ cần vào mục <strong>Kiểm tra ảnh &amp; video</strong> trên màn hình giám sát, chọn bất kỳ tấm ảnh hoặc đoạn video mặt bể nào trong máy tính rồi bấm <strong>Phân tích tệp này</strong> để xem ngay tỷ lệ bọt, màu nước, độ trong và số lượng rác nổi.</span>
+                <span class="en">Yes! Go to the <strong>File Analyzer</strong> tab on the monitoring screen, pick any saved basin photo or video from your computer, and click <strong>Analyze This File</strong> for instant foam, color, clarity, and trash results.</span>
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span class="vi">© 2026 Iris Water · Hướng dẫn &amp; Giải đáp Vận hành Hệ thống Giám sát Nước thải</span>
+      <span class="en">© 2026 Iris Water · Smart Wastewater Monitoring Guide &amp; FAQs</span>
+    </div>
+  </footer>
+
+  <!-- Thanh mờ cố định dưới đáy trang chuẩn mẫu MoMo Talent -->
+  <div class="sticky-bottom-cta-bar" role="region" aria-label="Quick Launch">
+    <a href="/app" class="btn-try-it-now">TRY IT NOW</a>
+  </div>
+
+  <script>
+    (function () {
+      var savedLang = "vi";
+      try { savedLang = localStorage.getItem("iris_lang") || "vi"; } catch (_) {}
+      document.documentElement.setAttribute("data-lang", savedLang);
+
+      var langBtn = document.getElementById("btn-guide-lang");
+      if (langBtn) {
+        langBtn.addEventListener("click", function () {
+          var cur = document.documentElement.getAttribute("data-lang") === "en" ? "vi" : "en";
+          document.documentElement.setAttribute("data-lang", cur);
+          try { localStorage.setItem("iris_lang", cur); } catch (_) {}
+        });
+      }
+
+      document.querySelectorAll(".momo-acc-trigger").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var item = btn.closest(".momo-acc-item");
+          if (item) {
+            item.classList.toggle("open");
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

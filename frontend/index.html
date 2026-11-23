@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="vi" data-lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iris Water — Giám sát Xử lý Nước thải / Wastewater Monitoring</title>
+  <meta name="description" content="Hệ thống quan sát mặt bể, phân tích Hóa lý – Sinh học theo kịch bản và cảnh báo vận hành xử lý nước thải.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="icon.png?v=20261123_momo">
+  <link rel="stylesheet" href="styles.css?v=20261123_header3">
+</head>
+<body>
+  <div class="hmi-shell" id="app-container">
+
+    <!-- 1. THANH HEADER 1 DÒNG GỌN GÀNG CHUẨN MOMO CAREERS -->
+    <header class="hmi-topbar">
+      <div class="topbar-container">
+        <a href="/" class="hmi-brand" title="IRIS">
+          <div class="stacked-logo" aria-label="IRIS">
+            <span>ir</span>
+            <span>is</span>
+          </div>
+          <span class="brand-outline-badge">
+            <span class="vi">Nước thải</span>
+            <span class="en">Wastewater</span>
+          </span>
+        </a>
+
+        <!-- Các mục điều hướng chính nằm thẳng 1 hàng -->
+        <nav class="light-tab-nav" role="tablist" aria-label="Workspace Tabs">
+          <button type="button" class="nav-tab-btn active" data-app-tab="overview">
+            <span class="vi">Trực mặt bể</span>
+            <span class="en">Live Basin</span>
+          </button>
+          <button type="button" class="nav-tab-btn" data-app-tab="phys">
+            <span class="vi">Bể Hóa lý</span>
+            <span class="en">Physicochemical</span>
+          </button>
+          <button type="button" class="nav-tab-btn" data-app-tab="bio">
+            <span class="vi">Bể Sinh học</span>
+            <span class="en">Biological</span>
+          </button>
+          <button type="button" class="nav-tab-btn" data-app-tab="lab">
+            <span class="vi">Kiểm tra ảnh &amp; video</span>
+            <span class="en">File Analyzer</span>
+          </button>
+          <button type="button" class="nav-tab-btn" data-app-tab="logbook">
+            <span class="vi">Nhật ký cảnh báo</span>
+            <span class="en">Alert Logbook</span>
+            <span class="tab-badge-count num-mono" id="alerts-count-badge">0</span>
+          </button>
+        </nav>
+
+        <!-- Cụm nút phụ bên phải tinh gọn (Trạng thái + Cài đặt + Hướng dẫn + Ngôn ngữ) -->
+        <div class="topbar-actions-right">
+          <div class="sys-status-cell" id="backend-status-badge" title="Server Status">
+            <span class="led-dot dot-online" id="backend-status-dot"></span>
+            <span id="backend-status-text">Online</span>
+          </div>
+          <div class="sys-status-cell" id="ws-status-badge" style="display:none;">
+            <span class="led-dot dot-online" id="ws-status-dot"></span>
+            <span id="ws-status-text">Alerts</span>
+          </div>
+          <div class="sys-clock" id="digital-clock" style="display:none;">00:00:00</div>
+
+          <a href="/#section-guide" class="clean-action-link">
+            <span class="vi">Hướng dẫn</span>
+            <span class="en">Guide</span>
+          </a>
+          <button type="button" class="clean-action-link" id="btn-open-settings">
+            <span class="vi">Cài đặt</span>
+            <span class="en">Settings</span>
+          </button>
+          <button type="button" class="lang-switch-btn" id="btn-lang-toggle" title="Đổi ngôn ngữ / Switch Language">
+            <span class="vi">EN</span>
+            <span class="en">VI</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 2. DẢI BÁO ĐỘNG KHẨN -->
+    <div class="emergency-alert-bar" id="emergency-alert-bar" style="display:none;">
+      <div class="alert-bar-inner">
+        <span class="alert-code-tag">
+          <span class="vi">CẢNH BÁO VẬN HÀNH</span>
+          <span class="en">OPERATIONAL ALERT</span>
+        </span>
+        <div class="alert-text-group">
+          <strong id="alert-bar-title">Cần kiểm tra hiện trường</strong>
+          <span id="alert-bar-desc">Phát hiện chỉ số mặt bể vượt ngưỡng vận hành cho phép.</span>
+        </div>
+        <button id="btn-dismiss-alert" class="btn-alert-ack" type="button">
+          <span class="vi">Xác nhận đã kiểm tra</span>
+          <span class="en">Acknowledge</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. KHÔNG GIAN LÀM VIỆC ĐƯỢC CĂN LỀ TRỤC 1400PX CHUẨN XÁC -->
+    <main class="tabbed-stage-container">
+
+      <!-- ====================================================================
+           TAB 1: TRỰC MẶT BỂ & KỊCH BẢN (LIVE BASIN & SCENARIOS)
+           ==================================================================== -->
+      <div class="app-tab-view active" id="tab-view-overview" data-tab-panel="overview">
+        <div class="overview-split-grid">
+
+          <!-- Cột trái: Camera + Thước đo bọt + 4 Thẻ chỉ số bằng chiều cao -->
+          <div class="overview-left-col">
+            <section class="soft-card" id="video-card">
+              <div class="pane-toolbar">
+                <div class="pane-title-left">
+                  <span class="led-dot dot-online"></span>
+                  <div class="light-basin-pill">
+                    <span class="basin-pill-label"><span class="vi">Đang xem:</span><span class="en">Basin:</span></span>
+                    <select id="basin-stage-select" class="basin-pill-select" aria-label="Select Basin">
+                      <option value="Bể sinh học Hiếu khí" selected>Bể Sinh học</option>
+                      <option value="Bể Tuyển nổi Hóa lý">Bể Hóa lý</option>
+                      <option value="Bể Lắng & Khử trùng đầu ra">Bể Lắng &amp; Đầu ra</option>
+                      <option value="Bể Điều hòa đầu vào">Bể Điều hòa đầu vào</option>
+                    </select>
+                  </div>
+                  <h1 id="camera-room-name" class="sr-only">Bể sinh học Hiếu khí</h1>
+                  <span class="source-tag" id="cam-active-name-txt">Sẵn sàng</span>
+                </div>
+
+                <div class="pane-toolbar-controls">
+                  <div class="segmented-control" role="group">
+                    <button type="button" class="seg-btn active" id="btn-view-live" data-view-mode="live">
+                      <span class="vi">Hình thực tế</span>
+                      <span class="en">Live Video</span>
+                    </button>
+                    <button type="button" class="seg-btn" id="btn-view-mask" data-view-mode="mask">
+                      <span class="vi">Tô màu vùng bọt</span>
+                      <span class="en">Foam Highlight</span>
+                    </button>
+                    <button type="button" class="seg-btn" id="btn-view-split" data-view-mode="split">
+                      <span class="vi">Xem song song</span>
+                      <span class="en">Split View</span>
+                    </button>
+                  </div>
+
+                  <button type="button" class="btn-toolbar-action" id="btn-lab-test-sample">
+                    <span class="vi">Chạy video bể mẫu</span>
+                    <span class="en">Run Sample Video</span>
+                  </button>
+
+                  <div class="cam-menu-wrapper" id="cam-menu-wrapper">
+                    <button type="button" class="btn-toolbar-primary" id="btn-cam-menu-toggle">
+                      <span class="vi">Chọn nguồn camera</span>
+                      <span class="en">Video Source</span>
+                    </button>
+                    <div class="bubble-popover-menu" id="cam-popover-menu">
+                      <div class="popover-section-label">
+                        <span class="vi">Chọn nguồn thu hình ảnh mặt bể</span>
+                        <span class="en">Choose Basin Video Source</span>
+                      </div>
+                      <div class="camera-form-grid">
+                        <div class="cam-field-group">
+                          <label for="camera-type-select" class="cam-field-label">
+                            <span class="vi">Loại nguồn hình</span>
+                            <span class="en">Source Type</span>
+                          </label>
+                          <select id="camera-type-select" class="cam-select">
+                            <option value="video">Video mẫu có sẵn</option>
+                            <option value="webcam">Camera cắm cổng USB</option>
+                            <option value="rtsp">Camera mạng nhà máy</option>
+                          </select>
+                        </div>
+                        <div class="cam-field-group" id="group-webcam-device">
+                          <label for="webcam-device-select" class="cam-field-label">
+                            <span class="vi">Thiết bị Camera</span>
+                            <span class="en">Camera Device</span>
+                          </label>
+                          <div class="cam-input-action-row">
+                            <select id="webcam-device-select" class="cam-select">
+                              <option value="0">Camera 0</option>
+                            </select>
+                            <button type="button" class="btn-cam-action" id="btn-scan-webcams">Scan</button>
+                          </div>
+                        </div>
+                        <div class="cam-field-group" id="group-rtsp-preset" style="display:none;">
+                          <label for="rtsp-preset-select" class="cam-field-label">
+                            <span class="vi">Hãng Camera IP</span>
+                            <span class="en">IP Camera Brand</span>
+                          </label>
+                          <select id="rtsp-preset-select" class="cam-select">
+                            <option value="custom">Custom URL</option>
+                            <option value="hikvision">Hikvision</option>
+                            <option value="dahua">Dahua / Imou</option>
+                            <option value="ezviz">EZVIZ</option>
+                            <option value="tapo">TP-Link Tapo</option>
+                          </select>
+                        </div>
+                        <div class="cam-field-group" id="group-video-preset" style="display:none;">
+                          <label for="video-preset-select" class="cam-field-label">
+                            <span class="vi">Video thực nghiệm có sẵn</span>
+                            <span class="en">Available Basin Videos</span>
+                          </label>
+                          <div class="cam-input-action-row">
+                            <select id="video-preset-select" class="cam-select">
+                              <option value="">Loading…</option>
+                            </select>
+                            <button type="button" class="btn-cam-action" id="btn-refresh-videos">Reload</button>
+                          </div>
+                          <div class="cam-field-hint" id="video-list-hint">Chọn video mặt bể có sẵn để phát.</div>
+                        </div>
+                      </div>
+                      <div class="cam-full-row" id="group-rtsp-url-row" style="display:none;">
+                        <label for="rtsp-url-input" class="cam-field-label">RTSP Stream URL</label>
+                        <div class="cam-input-action-row">
+                          <input type="text" id="rtsp-url-input" class="cam-input" placeholder="rtsp://192.168.1.100:554/stream1" spellcheck="false">
+                          <button type="button" class="btn-cam-action" id="btn-test-rtsp">Test</button>
+                        </div>
+                        <button type="button" class="btn-cam-action btn-cam-discover" id="btn-discover-cameras">Scan LAN Cameras</button>
+                        <div class="cam-discover-results" id="cam-discover-results" style="display:none;"></div>
+                        <div class="cam-input-action-row">
+                          <input type="text" id="rtsp-username-input" class="cam-input" placeholder="Username" autocomplete="off" spellcheck="false">
+                          <input type="password" id="rtsp-password-input" class="cam-input" placeholder="Password" autocomplete="new-password">
+                        </div>
+                      </div>
+                      <div class="cam-full-row" id="group-video-custom-row" style="display:none;">
+                        <label for="custom-video-path-input" class="cam-field-label">File Path</label>
+                        <input type="text" id="custom-video-path-input" class="cam-input" placeholder="data/videos/Video Project 2.mp4" spellcheck="false">
+                      </div>
+                      <div class="popover-quick-actions">
+                        <button type="button" class="popover-item-btn" id="btn-snapshot">
+                          <span class="vi">Lưu ảnh</span><span class="en">Snapshot</span>
+                        </button>
+                        <button type="button" class="popover-item-btn" id="btn-fullscreen">
+                          <span class="vi">Phóng to</span><span class="en">Fullscreen</span>
+                        </button>
+                        <button type="button" class="popover-item-btn" id="btn-camera-toggle">
+                          <span id="btn-cam-toggle-txt">Dừng luồng</span>
+                          <span id="btn-cam-toggle-icon" style="display:none"></span>
+                        </button>
+                        <button type="button" class="popover-item-btn" id="btn-refresh-stream">
+                          <span class="vi">Nạp lại</span><span class="en">Refresh</span>
+                        </button>
+                      </div>
+                      <div class="cam-buttons-row">
+                        <button type="button" class="btn-cam-primary" id="btn-apply-camera">
+                          <span class="btn-spinner" id="cam-spinner" style="display:none;">…</span>
+                          <span id="btn-apply-txt">Kết nối nguồn này</span>
+                        </button>
+                        <button type="button" class="btn-cam-secondary" id="btn-save-camera-default">
+                          <span class="vi">Lưu mặc định</span><span class="en">Save Default</span>
+                        </button>
+                      </div>
+                      <div class="cam-toast-feedback" id="cam-toast-feedback" style="display:none;"></div>
+                    </div>
+                  </div>
+
+                  <button type="button" class="btn-toolbar-icon" id="btn-quick-fullscreen" title="Fullscreen" aria-label="Fullscreen">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Khung hình 16:9 -->
+              <div class="viewport-stage mode-live" id="viewport-stage">
+                <div class="video-container" id="video-container">
+                  <img id="live-video-stream" alt="Basin stream">
+                  <div class="hud-corner-tl">
+                    <span class="hud-chip" id="overlay-basin-chip">Bể sinh học Hiếu khí</span>
+                    <span class="hud-chip hud-chip-muted" id="roi-assumption-tag">Khung bể chữ nhật</span>
+                  </div>
+                  <div class="video-overlay-ts" id="video-overlay-ts"></div>
+                  <div class="video-overlay-camtag" id="video-overlay-camtag">CAM-01</div>
+                  <div class="video-fall-badge" id="video-fall-badge" style="display:none;">
+                    <span id="video-fall-text">THRESHOLD EXCEEDED</span>
+                  </div>
+                  <div class="stream-offline-overlay" id="stream-offline-overlay">
+                    <div class="offline-box">
+                      <span class="offline-code">
+                        <span class="vi">SẴN SÀNG QUAN SÁT</span>
+                        <span class="en">READY FOR STREAM</span>
+                      </span>
+                      <h3 id="offline-title">
+                        <span class="vi">Chưa mở luồng hình ảnh mặt bể</span>
+                        <span class="en">Basin video feed not connected</span>
+                      </h3>
+                      <p id="offline-desc">
+                        <span class="vi">Bấm nút <strong>«Chạy video bể mẫu»</strong> phía trên để xem ngay dữ liệu thực tế, hoặc bấm <strong>«Đổi nguồn hình»</strong> để kết nối camera nhà máy.</span>
+                        <span class="en">Click <strong>"Run Sample Video"</strong> above to preview real basin data, or click <strong>"Video Source"</strong> to connect a plant camera.</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mask-container" id="mask-container">
+                  <img id="foam-preview-img" alt="Segmentation mask" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+                  <div class="mask-caption-bar">
+                    <span>
+                      <span class="vi">Vùng tô màu: Lớp bọt nổi · Khung cam: Rác / Dị vật nổi</span>
+                      <span class="en">Tinted mask: Surface foam · Orange box: Floating debris</span>
+                    </span>
+                    <strong id="foam-latency-txt">—</strong>
+                  </div>
+                  <div class="seg-empty-hint" id="seg-empty-hint">
+                    <span class="vi">Đang chờ khung hình phân tích đầu tiên…</span>
+                    <span class="en">Waiting for first analyzed frame…</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Thước đo độ phủ bọt -->
+              <div class="isa-bullet-strip" id="kpi-tile-foam">
+                <div class="bullet-meta-row">
+                  <div class="bullet-reading-group">
+                    <span class="bullet-label">
+                      <span class="vi">Tỷ lệ bọt phủ mặt bể:</span>
+                      <span class="en">Surface Foam Coverage:</span>
+                    </span>
+                    <strong class="bullet-value" id="kpi-foam">—</strong>
+                    <span class="state-chip" id="kpi-foam-level">Đang chờ</span>
+                  </div>
+                  <div class="bullet-peak-group">
+                    <span class="peak-label">
+                      <span class="vi">Cao nhất trong ca:</span>
+                      <span class="en">Shift Peak:</span>
+                      <strong id="foam-max-pct">—</strong>
+                    </span>
+                    <button type="button" class="btn-inline-reset" id="btn-foam-reset-session">
+                      <span class="vi">Đặt lại</span>
+                      <span class="en">Reset</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="bullet-track-wrap">
+                  <div class="bullet-track">
+                    <div class="bullet-fill" id="foam-ruler-fill" style="width: 0%;"></div>
+                    <div class="bullet-setpoint sp-warn" style="left: 25%;">
+                      <span class="sp-label">25% Chú ý</span>
+                    </div>
+                    <div class="bullet-setpoint sp-alarm" style="left: 40%;">
+                      <span class="sp-label">40% Báo động</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 4 Thẻ chỉ số bề mặt căn đều 4 cột cao bằng nhau -->
+            <div class="telemetry-matrix-4">
+              <article class="matrix-cell" id="kpi-tile-water">
+                <div class="cell-header">
+                  <span class="cell-index">
+                    <span class="vi">1. Màu nước hiện tại</span>
+                    <span class="en">1. Water Color</span>
+                  </span>
+                  <span class="color-swatch-dot" id="kpi-water-swatch" title="Màu nước thực tế"></span>
+                </div>
+                <div class="cell-primary" id="kpi-color">—</div>
+                <div class="cell-footer" id="kpi-lighting-cond">Đã tự động cân bằng ánh sáng</div>
+              </article>
+
+              <article class="matrix-cell" id="kpi-tile-clarity">
+                <div class="cell-header">
+                  <span class="cell-index">
+                    <span class="vi">2. Độ trong của nước</span>
+                    <span class="en">2. Water Clarity</span>
+                  </span>
+                  <span class="cell-tag" id="kpi-reflection-badge">Phản chiếu: —</span>
+                </div>
+                <div class="cell-primary">
+                  <span class="vi">Độ trong:</span><span class="en">Clarity:</span>
+                  <span id="kpi-clarity-score" class="num-mono">—</span>
+                </div>
+                <div class="cell-footer" id="kpi-clarity-desc">Đo qua độ nét bóng nước</div>
+              </article>
+
+              <article class="matrix-cell" id="kpi-tile-sludge">
+                <div class="cell-header">
+                  <span class="cell-index">
+                    <span class="vi">3. Bùn &amp; Bọt khí sục</span>
+                    <span class="en">3. Sludge &amp; Bubbles</span>
+                  </span>
+                  <span class="cell-tag num-mono" id="kpi-sludge-clusters">0 cụm</span>
+                </div>
+                <div class="cell-primary">
+                  <span class="vi">Độ phủ đều:</span><span class="en">Spread:</span>
+                  <span id="kpi-sludge-dispersion" class="num-mono">—</span>
+                </div>
+                <div class="cell-footer" id="kpi-bubble-texture">Tình trạng bùn &amp; sục khí</div>
+              </article>
+
+              <article class="matrix-cell" id="kpi-tile-debris">
+                <div class="cell-header">
+                  <span class="cell-index">
+                    <span class="vi">4. Rác nổi &amp; Váng dầu</span>
+                    <span class="en">4. Trash &amp; Oil Sheen</span>
+                  </span>
+                  <span class="cell-tag num-mono" id="kpi-oil-sheen">Váng dầu: 0%</span>
+                </div>
+                <div class="cell-primary" id="kpi-debris">0</div>
+                <div class="cell-footer" id="kpi-debris-summary">Túi nilon &amp; vật trôi nổi</div>
+              </article>
+            </div>
+          </div>
+
+          <!-- Cột phải: Kịch bản vận hành & Khuyến nghị xử lý -->
+          <aside class="overview-right-col">
+            <section class="soft-card sop-pane" id="scenario-engine-card">
+              <div class="pane-toolbar">
+                <span class="pane-section-title">
+                  <span class="vi">Chẩn đoán &amp; Hướng dẫn xử lý</span>
+                  <span class="en">Diagnosis &amp; Action Advice</span>
+                </span>
+                <span class="source-tag" id="foam-state-banner">Tự động</span>
+              </div>
+
+              <div class="sop-summary-banner">
+                <p id="foam-ops-action">Bấm «Chạy video bể mẫu» hoặc chọn camera để phần mềm bắt đầu kiểm tra mặt bể.</p>
+              </div>
+
+              <div class="scenario-list" id="scenario-list">
+                <div class="scenario-item is-normal">
+                  <div class="scenario-item-head">
+                    <span class="scenario-stage-tag">
+                      <span class="vi">Toàn bộ bể</span>
+                      <span class="en">All Basins</span>
+                    </span>
+                    <span class="scenario-sev-badge">Sẵn sàng</span>
+                  </div>
+                  <h4>
+                    <span class="vi">Đang chờ hình ảnh từ mặt bể</span>
+                    <span class="en">Waiting for basin video signal</span>
+                  </h4>
+                  <p class="scenario-diag">
+                    <span class="vi">Phần mềm tự động kết hợp hình ảnh mặt bể (lượng bọt, màu nước, độ trong, bùn, rác nổi) với số đo tại bể để báo ngay khi có bất thường.</span>
+                    <span class="en">Combines live surface visuals with basin meter readings to alert you immediately when an issue occurs.</span>
+                  </p>
+                  <div class="scenario-action-box">
+                    <strong><span class="vi">Cách làm:</span><span class="en">Next Step:</span></strong>
+                    <span class="vi">Bấm «Chạy video bể mẫu» để xem phân tích tự động.</span>
+                    <span class="en">Click "Run Sample Video" to start automated analysis.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sop-footer-bar">
+                <label class="fancy-check-row">
+                  <input type="checkbox" id="foam-monitor-enabled" checked>
+                  <span>
+                    <span class="vi">Tự động phân tích mặt bể mỗi 2 giây</span>
+                    <span class="en">Auto-analyze basin surface every 2 seconds</span>
+                  </span>
+                </label>
+                <label class="fancy-check-row">
+                  <input type="checkbox" id="foam-log-event" checked>
+                  <span>
+                    <span class="vi">Tự động lưu nhật ký &amp; chụp ảnh khi vượt ngưỡng</span>
+                    <span class="en">Auto-log events &amp; capture snapshots on breach</span>
+                  </span>
+                </label>
+                <div class="sop-telemetry-line" id="foam-monitor-status">Standby…</div>
+              </div>
+            </section>
+          </aside>
+
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           TAB 2: BỂ HÓA LÝ & TUYỂN NỔI
+           ==================================================================== -->
+      <div class="app-tab-view" id="tab-view-phys" data-tab-panel="phys">
+        <div class="focused-stage-container">
+          <div class="momo-section-head">
+            <div class="momo-head-left">
+              <span class="momo-eyebrow-pill">
+                <span class="vi">Bước 01 · Bể Hóa lý &amp; Tuyển nổi</span>
+                <span class="en">Stage 01 · Physicochemical Treatment Basin</span>
+              </span>
+              <h2 class="momo-head-title">
+                <span class="vi">Theo dõi <span class="text-gradient">Màu nước, Cặn nổi &amp; Độ trong</span></span>
+                <span class="en">Monitor <span class="text-gradient">Water Color, Flocs &amp; Clarity</span></span>
+              </h2>
+              <p class="momo-head-desc">
+                <span class="vi">Kiểm tra màu nước vào/ra, lớp cặn nổi, cặn lắng và tốc độ máy khuấy để giữ lại chất bẩn trước khi nước chảy sang bể vi sinh.</span>
+                <span class="en">Checks inlet/outlet water color, floating/settling flocs, and mixer speed to trap pollutants before the biological tank.</span>
+              </p>
+            </div>
+            <button type="button" class="btn-switch-basin-cta" data-basin-val="Bể Tuyển nổi Hóa lý">
+              <span class="vi">Xem Camera Bể Hóa lý</span>
+              <span class="en">View Physicochemical Camera</span>
+            </button>
+          </div>
+
+          <div class="stage-bento-grid" id="card-stage-phys">
+            <div class="bento-metric-card">
+              <div class="bento-card-top">
+                <span class="bento-num">01</span>
+                <span class="bento-tag"><span class="vi">Nước vào – Nước ra</span><span class="en">Inlet – Outlet</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Màu sắc nước trong bể</span>
+                  <span class="en">Basin Water Color</span>
+                </h3>
+                <p>
+                  <span class="vi">Nhận biết sớm nước còn lẫn phẩm màu công nghiệp hoặc chất bẩn chưa được xử lý sạch.</span>
+                  <span class="en">Detects residual industrial dyes or incompletely treated wastewater early.</span>
+                </p>
+                <div class="bento-status-row">
+                  <strong id="phys-water-color" class="sm-badge">Đang chờ</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card">
+              <div class="bento-card-top">
+                <span class="bento-num">02</span>
+                <span class="bento-tag"><span class="vi">Độ nét bóng nước</span><span class="en">Surface Reflection</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Độ trong của nước</span>
+                  <span class="en">Water Clarity</span>
+                </h3>
+                <p>
+                  <span class="vi">Chấm điểm độ trong suốt của nước dựa vào độ rõ nét của hình ảnh phản chiếu trên mặt bể.</span>
+                  <span class="en">Scores water clarity based on how clearly surrounding structures reflect on the surface.</span>
+                </p>
+                <div class="bento-status-row">
+                  <strong id="phys-water-clarity" class="sm-badge">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card">
+              <div class="bento-card-top">
+                <span class="bento-num">03</span>
+                <span class="bento-tag"><span class="vi">Lớp cặn trên mặt</span><span class="en">Surface Flocs</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Cặn nổi trên mặt bể</span>
+                  <span class="en">Floating Floc Quality</span>
+                </h3>
+                <p>
+                  <span class="vi">Kiểm tra hạt cặn nổi có kết dính tốt và phủ đều hay không; nếu cặn quá rời rạc phần mềm sẽ báo ngay.</span>
+                  <span class="en">Checks if floating flocs bind well and spread evenly, alerting operators when floc formation is poor.</span>
+                </p>
+                <div class="bento-status-row">
+                  <strong id="phys-floating-floc" class="sm-badge">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card">
+              <div class="bento-card-top">
+                <span class="bento-num">04</span>
+                <span class="bento-tag"><span class="vi">Bảo vệ bể vi sinh</span><span class="en">Bio-Tank Guard</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Cặn lắng &amp; Nguy cơ tràn chất bẩn</span>
+                  <span class="en">Settling Flocs &amp; Carryover Risk</span>
+                </h3>
+                <p>
+                  <span class="vi">Cảnh báo sớm khi nước bị đục do cặn không lắng hết, tránh để muối và kim loại nặng tràn sang bể vi sinh.</span>
+                  <span class="en">Warns early when poor settling leaves water murky, preventing salt or heavy metals from spilling into bio-tanks.</span>
+                </p>
+                <div class="bento-status-row">
+                  <strong id="phys-settling-floc" class="sm-badge">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card">
+              <div class="bento-card-top">
+                <span class="bento-num">05</span>
+                <span class="bento-tag"><span class="vi">Bảo vệ máy bơm</span><span class="en">Pump Protection</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Vật cản nổi lớn &amp; Váng dầu</span>
+                  <span class="en">Large Floating Objects &amp; Oil Sheen</span>
+                </h3>
+                <p>
+                  <span class="vi">Phát hiện sớm các mảnh rác lớn và lớp váng dầu nổi trên mặt nước để tránh làm kẹt máy bơm.</span>
+                  <span class="en">Early detection of large floating trash and oil sheen to prevent pump blockages.</span>
+                </p>
+                <div class="bento-status-row">
+                  <strong id="phys-large-debris" class="sm-badge">An toàn</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card bento-interactive-form">
+              <div class="bento-card-top">
+                <span class="bento-num">06</span>
+                <span class="bento-tag"><span class="vi">Chỉnh tại bể</span><span class="en">Mixer Control</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Tốc độ quay máy khuấy</span>
+                  <span class="en">Mixer Rotation Speed</span>
+                </h3>
+                <p>
+                  <span class="vi">Nhập tốc độ quay hiện tại của cánh khuấy để phần mềm kiểm tra xem tốc độ khuấy đã phù hợp với lượng cặn chưa.</span>
+                  <span class="en">Enter current mixer speed so the software can check if mixing matches floc formation.</span>
+                </p>
+                <div class="fancy-stepper-control">
+                  <button type="button" class="stepper-btn" data-step-target="input-mixer-rpm" data-step-delta="-5">−</button>
+                  <div class="stepper-input-wrap">
+                    <input type="number" id="input-mixer-rpm" value="45" min="0" max="300" class="fancy-num-input">
+                    <span class="stepper-unit">vòng/phút</span>
+                  </div>
+                  <button type="button" class="stepper-btn" data-step-target="input-mixer-rpm" data-step-delta="5">+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           TAB 3: BỂ SINH HỌC & ĐẦU RA
+           ==================================================================== -->
+      <div class="app-tab-view" id="tab-view-bio" data-tab-panel="bio">
+        <div class="focused-stage-container">
+          <div class="momo-section-head">
+            <div class="momo-head-left">
+              <span class="momo-eyebrow-pill">
+                <span class="vi">Bước 02 · Bể Sinh học &amp; Nước sạch đầu ra</span>
+                <span class="en">Stage 02 · Biological Basin &amp; Clean Outlet</span>
+              </span>
+              <h2 class="momo-head-title">
+                <span class="vi">Theo dõi <span class="text-gradient">Bùn vi sinh, Bọt khí &amp; Nước đầu ra</span></span>
+                <span class="en">Monitor <span class="text-gradient">Microbial Sludge, Bubbles &amp; Outlet Water</span></span>
+              </h2>
+              <p class="momo-head-desc">
+                <span class="vi">Giữ cho hệ vi sinh khỏe mạnh, tránh bật máy sục khí quá mức gây tốn điện và kiểm tra nước sạch trước khi xả ra ngoài.</span>
+                <span class="en">Keeps microbes healthy, prevents wasted blower electricity, and checks clean water before discharge.</span>
+              </p>
+            </div>
+            <button type="button" class="btn-switch-basin-cta" data-basin-val="Bể sinh học Hiếu khí">
+              <span class="vi">Xem Camera Bể Sinh học</span>
+              <span class="en">View Biological Camera</span>
+            </button>
+          </div>
+
+          <div class="stage-bento-grid" id="card-stage-bio">
+            <div class="bento-metric-card">
+              <div class="bento-card-top">
+                <span class="bento-num">01</span>
+                <span class="bento-tag"><span class="vi">Quan trọng nhất</span><span class="en">Most Important</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Chất lượng Bùn vi sinh</span>
+                  <span class="en">Microbial Sludge Quality</span>
+                </h3>
+                <p>
+                  <span class="vi">Kiểm tra màu sắc, độ kết dính và độ phủ đều của bùn để biết vi sinh vật có đang khỏe mạnh và làm sạch nước tốt không.</span>
+                  <span class="en">Checks sludge color, binding, and spread to confirm microbes are healthy and cleaning water well.</span>
+                </p>
+                <div class="bento-status-row">
+                  <strong id="bio-sludge-state" class="sm-badge">Đang chờ</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card">
+              <div class="bento-card-top">
+                <span class="bento-num">02</span>
+                <span class="bento-tag"><span class="vi">Sục khí &amp; Tiền điện</span><span class="en">Aeration &amp; Power</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Lượng bọt khí sục trên mặt bể</span>
+                  <span class="en">Surface Aeration Bubbles</span>
+                </h3>
+                <p>
+                  <span class="vi">Không có bọt khí ⇒ thiếu oxy làm chết vi sinh · Quá nhiều bọt ⇒ tốn điện và nhanh hỏng máy thổi khí.</span>
+                  <span class="en">No bubbles ⇒ low oxygen harms microbes · Too much foam ⇒ wastes electricity and wears out blowers.</span>
+                </p>
+                <div class="bento-status-row">
+                  <strong id="bio-bubble-state" class="sm-badge">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card">
+              <div class="bento-card-top">
+                <span class="bento-num">03</span>
+                <span class="bento-tag"><span class="vi">Rác trôi nổi</span><span class="en">Floating Trash</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Rác nhựa &amp; Túi nilon rơi vào bể</span>
+                  <span class="en">Plastic Bags &amp; Floating Trash</span>
+                </h3>
+                <p>
+                  <span class="vi">Tự động phát hiện túi nilon, mảnh nhựa và bụi bẩn lớn trôi nổi trên mặt bể để nhân viên vớt kịp thời.</span>
+                  <span class="en">Automatically spots plastic bags, fragments, and heavy dust floating on the basin for quick removal.</span>
+                </p>
+                <div class="bento-status-row">
+                  <strong id="bio-debris-state" class="sm-badge">Sạch</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card">
+              <div class="bento-card-top">
+                <span class="bento-num">04</span>
+                <span class="bento-tag"><span class="vi">Nước xả ra ngoài</span><span class="en">Outlet Quality</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Độ trong &amp; Màu nước đầu ra</span>
+                  <span class="en">Outlet Water Clarity &amp; Color</span>
+                </h3>
+                <p>
+                  <span class="vi">Nước đầu ra càng trong càng đạt chuẩn; nếu nước còn ám màu nghĩa là bước xử lý phía trước chưa sạch hết.</span>
+                  <span class="en">Cleaner outlet water means better treatment; remaining tint warns of incomplete upstream cleaning.</span>
+                </p>
+                <div class="bento-status-row">
+                  <strong id="bio-effluent-state" class="sm-badge">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card bento-interactive-form">
+              <div class="bento-card-top">
+                <span class="bento-num">05</span>
+                <span class="bento-tag"><span class="vi">Đèn diệt khuẩn</span><span class="en">Disinfection Lamp</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Trạng thái đèn chiếu khử trùng</span>
+                  <span class="en">UV Disinfection Lamp Status</span>
+                </h3>
+                <p>
+                  <span class="vi">Theo dõi xem đèn chiếu diệt khuẩn ở đầu ra có đang bật sáng đều hay bị bám bẩn, yếu sáng.</span>
+                  <span class="en">Tracks whether outlet disinfection lamps are shining evenly or dimmed by dirt buildup.</span>
+                </p>
+                <div class="fancy-select-box">
+                  <select id="select-uv-lamp" class="fancy-select">
+                    <option value="off">Đang tắt đèn khử trùng</option>
+                    <option value="normal">Đèn sáng xanh ổn định</option>
+                    <option value="low">Đèn yếu hoặc bị bám cặn</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-metric-card bento-interactive-form">
+              <div class="bento-card-top">
+                <span class="bento-num">06</span>
+                <span class="bento-tag"><span class="vi">Số đo tại bể</span><span class="en">Basin Meters</span></span>
+              </div>
+              <div class="bento-body">
+                <h3>
+                  <span class="vi">Lượng Oxy &amp; Độ pH trong nước</span>
+                  <span class="en">Water Oxygen &amp; pH Levels</span>
+                </h3>
+                <p>
+                  <span class="vi">Nhập số đo oxy và độ pH của bể để phần mềm kết hợp với hình ảnh camera đưa ra hướng dẫn xử lý chính xác.</span>
+                  <span class="en">Enter basin oxygen and pH readings to combine with camera visuals for accurate action advice.</span>
+                </p>
+                <div class="dual-sensor-pills">
+                  <div class="sensor-input-pill">
+                    <span class="sensor-tag">Lượng Oxy</span>
+                    <div class="sensor-val-row">
+                      <input type="number" id="input-bio-do" value="2.4" step="0.1" min="0" max="12" class="fancy-num-input">
+                      <span>mg/L</span>
+                    </div>
+                  </div>
+                  <div class="sensor-input-pill">
+                    <span class="sensor-tag">Độ pH</span>
+                    <div class="sensor-val-row">
+                      <input type="number" id="input-bio-ph" value="7.2" step="0.1" min="2" max="12" class="fancy-num-input">
+                      <span>pH</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           TAB 4: KIỂM TRA ẢNH & VIDEO MẶT BỂ
+           ==================================================================== -->
+      <div class="app-tab-view" id="tab-view-lab" data-tab-panel="lab">
+        <div class="focused-stage-container">
+
+          <!-- Bàn thử nghiệm tải file -->
+          <section class="soft-card lab-studio-card" id="engineer-drawer">
+            <div class="pane-toolbar">
+              <span class="pane-section-title">
+                <span class="vi">Kiểm tra nhanh bằng Ảnh hoặc Video mặt bể có sẵn</span>
+                <span class="en">Quick Analysis from Saved Basin Photos or Videos</span>
+              </span>
+              <span class="source-tag">Có kết quả ngay</span>
+            </div>
+
+            <div class="fancy-dropzone-area">
+              <div class="dropzone-info">
+                <h3>
+                  <span class="vi">Chọn Ảnh hoặc Video mặt bể từ máy tính để kiểm tra</span>
+                  <span class="en">Choose a Basin Photo or Video from Your Computer</span>
+                </h3>
+                <p>
+                  <span class="vi">Chỉ cần chọn một tấm ảnh hoặc đoạn video quay mặt bể, phần mềm sẽ tự động đo tỷ lệ bọt nổi, nhận biết màu nước, độ trong và tìm rác trôi nổi.</span>
+                  <span class="en">Pick any basin photo or video clip and the software will automatically measure foam percentage, water color, clarity, and floating trash.</span>
+                </p>
+              </div>
+              <div class="dropzone-action-row">
+                <label class="file-picker-pill" for="lab-file-input">
+                  <input type="file" id="lab-file-input" accept="image/*,video/*" class="cam-input">
+                </label>
+                <button type="button" class="btn-gradient-primary" id="btn-lab-run-upload">
+                  <span class="vi">Phân tích tệp này</span>
+                  <span class="en">Analyze This File</span>
+                </button>
+              </div>
+              <div id="lab-upload-feedback" class="settings-feedback" style="display:none;"></div>
+            </div>
+
+            <!-- Khung hiển thị ảnh kết quả ngay tại chỗ sau khi tải lên -->
+            <div class="lab-preview-card" id="lab-inline-preview-card">
+              <img id="lab-inline-preview-img" class="lab-preview-thumb" alt="Analyzed basin preview">
+              <div class="lab-preview-details">
+                <h4 id="lab-inline-preview-title">Kết quả phân tích</h4>
+                <p id="lab-inline-preview-summary">Các chỉ số bọt, màu nước, độ trong và rác nổi đã được cập nhật bên dưới.</p>
+                <div>
+                  <button type="button" class="btn-toolbar-action" id="btn-lab-jump-overview">
+                    <span class="vi">Xem trên màn hình Trực mặt bể →</span>
+                    <span class="en">View on Live Basin Screen →</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="spec-audit-grid">
+              <div class="spec-audit-cell">
+                <span class="audit-code">
+                  <span class="vi">1 · Đo tỷ lệ bọt phủ mặt bể</span>
+                  <span class="en">1 · Surface Foam Percentage</span>
+                </span>
+                <strong id="task1-live-val">Đang chờ…</strong>
+                <p>
+                  <span class="vi">Tự động nhận diện vùng bọt trắng và tính xem lớp bọt đang chiếm bao nhiêu phần trăm mặt bể.</span>
+                  <span class="en">Automatically detects white foam and calculates how much of the basin surface it covers.</span>
+                </p>
+              </div>
+              <div class="spec-audit-cell">
+                <span class="audit-code">
+                  <span class="vi">2 · Kho ảnh và video mẫu có sẵn</span>
+                  <span class="en">2 · Built-in Sample Photos &amp; Videos</span>
+                </span>
+                <strong>be_1.png, Video Project 2.mp4, Bộ ảnh bể nước thải</strong>
+                <p>
+                  <span class="vi">Có sẵn trong thư mục dữ liệu của phần mềm để bạn mở lên kiểm tra bất cứ lúc nào.</span>
+                  <span class="en">Included in the software data folder so you can test anytime without a camera.</span>
+                </p>
+              </div>
+              <div class="spec-audit-cell">
+                <span class="audit-code">
+                  <span class="vi">3 · Nhận biết màu nước ngoài trời</span>
+                  <span class="en">3 · Outdoor Water Color Check</span>
+                </span>
+                <strong id="task3-live-val">Đang chờ…</strong>
+                <p>
+                  <span class="vi">Tự động điều chỉnh độ sáng khi trời nắng hoặc râm để phân biệt chính xác màu nước xanh trong, vàng đục hay nâu bùn.</span>
+                  <span class="en">Automatically adjusts for sunny or cloudy light to read clear green, murky yellow, or muddy brown water.</span>
+                </p>
+              </div>
+              <div class="spec-audit-cell">
+                <span class="audit-code">
+                  <span class="vi">4 · Phát hiện rác nổi &amp; váng dầu</span>
+                  <span class="en">4 · Floating Trash &amp; Oil Sheen</span>
+                </span>
+                <strong id="task4-live-val">Đang chờ…</strong>
+                <p>
+                  <span class="vi">Tách riêng lớp bọt để tìm đúng túi nilon, mảnh nhựa trôi nổi và lớp váng dầu loang trên mặt nước.</span>
+                  <span class="en">Separates background foam to spot floating plastic bags, fragments, and surface oil sheen.</span>
+                </p>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           TAB 5: NHẬT KÝ CẢNH BÁO & BẰNG CHỨNG (ALERT LOGBOOK)
+           ==================================================================== -->
+      <div class="app-tab-view" id="tab-view-logbook" data-tab-panel="logbook">
+        <div class="focused-stage-container">
+          <section class="soft-card logbook-pane" id="alerts-history-card">
+            <div class="pane-toolbar">
+              <span class="pane-section-title">
+                <span class="vi">Nhật ký Cảnh báo &amp; Bằng chứng</span>
+                <span class="en">Alert Logbook &amp; Evidence</span>
+              </span>
+              <button type="button" class="btn-inline-reset" id="btn-clear-temp">
+                <span class="vi">Làm mới</span>
+                <span class="en">Clear View</span>
+              </button>
+            </div>
+            <div class="alerts-feed" id="alerts-feed"></div>
+            <p class="empty-alerts" id="empty-alerts-placeholder">
+              <span class="vi">Chưa ghi nhận cảnh báo vượt ngưỡng nào trong ca trực.</span>
+              <span class="en">No threshold breach alerts recorded in the current shift.</span>
+            </p>
+            <table class="history-table" style="display:none;">
+              <tbody id="alerts-table-body"></tbody>
+            </table>
+          </section>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Hidden legacy bindings (tương thích 100% với app.js) -->
+  <div id="legacy-bindings" style="display:none;" aria-hidden="true">
+    <div id="kpi-foam-metric"></div>
+    <div id="foam-test-result">
+      <strong id="foam-avg-pct">—</strong>
+      <strong id="foam-level-txt">—</strong>
+    </div>
+    <span id="foam-monitor-pill"></span>
+    <div id="foam-ops-insight"></div>
+    <span id="kpi-sludge-floc"></span>
+    <span id="kpi-tracks">0</span>
+    <span id="kpi-fps">0.0</span>
+    <span id="kpi-risk">0.00</span>
+    <div id="kpi-risk-meter"></div>
+    <span id="kpi-risk-state">Ổn định</span>
+    <span id="telem-cpu">0%</span>
+    <span id="telem-ram">0 GB</span>
+    <span id="telem-gpu">N/A</span>
+    <span id="stat-total-alerts-count">0</span>
+    <span id="stat-cameras-online">1</span>
+    <span id="stat-uptime-days">0.0 ngày</span>
+    <span id="incident-timestamp-txt">—</span>
+    <span id="incident-confidence-txt">—</span>
+    <span id="incident-status-tag">—</span>
+    <span id="incident-cam-title">—</span>
+    <img id="incident-snapshot-img" alt="">
+    <button id="btn-view-incident-detail" type="button"></button>
+    <button id="btn-process-incident" type="button"></button>
+    <button id="btn-test-chime" type="button"></button>
+    <button id="btn-clear-permanent" type="button"></button>
+    <button id="btn-sound-toggle" type="button"></button>
+    <tbody id="person-table-body"></tbody>
+    <span id="hud-cam-name"></span>
+    <span id="cam-active-status-pill"></span>
+    <div id="extra-cam-grid"></div>
+    <div id="cam-list"></div>
+    <div id="extra-cam-empty"></div>
+    <span id="extra-cam-count">0/3</span>
+    <form id="extra-cam-form"></form>
+    <button id="btn-extra-cam-toggle-form" type="button"></button>
+    <button id="btn-extra-cam-cancel" type="button"></button>
+    <button id="btn-extra-cam-add" type="button"></button>
+    <button id="btn-extra-cam-test" type="button"></button>
+    <input id="extra-cam-name">
+    <select id="extra-cam-type"><option value="rtsp">rtsp</option><option value="webcam">webcam</option></select>
+    <input id="extra-cam-url">
+    <input id="extra-cam-user">
+    <input id="extra-cam-pass">
+    <select id="extra-cam-device"></select>
+    <div id="extra-cam-rtsp-row"></div>
+    <div id="extra-cam-webcam-row"></div>
+    <div id="extra-cam-feedback"></div>
+  </div>
+
+  <audio id="alert-sound" preload="auto">
+    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLI7c8s2GLAczk9vywYAsBDCS3PLCgCwEMpLc8sGALAQyktzywYAsBDOS3PLBgCwEM5Lc8sGALAQzktzywYAsBDOS3PLBgCwEM5Lc8sGALAQ=" type="audio/wav">
+  </audio>
+
+  <!-- CỬA SỔ CÀI ĐẶT -->
+  <div class="settings-modal-overlay" id="settings-modal-overlay" style="display:none;">
+    <div class="settings-modal-card" id="settings-modal-card">
+      <div class="settings-modal-header">
+        <h2><span class="vi">Cài đặt Hệ thống</span><span class="en">System Settings</span></h2>
+        <button class="btn-close-modal" id="btn-close-settings" type="button" title="Close">✕</button>
+      </div>
+      <div class="settings-modal-body">
+        <div class="settings-group">
+          <div class="settings-group-header">
+            <div class="settings-group-info">
+              <div class="settings-item-title">
+                <span><span class="vi">Khởi động cùng Windows</span><span class="en">Launch on Windows Startup</span></span>
+                <span class="badge-status-pill pill-off" id="autostart-status-pill">Off</span>
+              </div>
+              <p class="settings-item-desc">
+                <span class="vi">Tự động chạy dịch vụ giám sát 24/7 khi bật máy tính.</span>
+                <span class="en">Automatically run 24/7 monitoring service on boot.</span>
+              </p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-autostart">
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <div class="settings-feedback" id="autostart-feedback" style="display:none;"></div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-item-title">
+            <span><span class="vi">Kiểm tra thiết bị Camera</span><span class="en">Camera Diagnostics</span></span>
+          </div>
+          <p class="settings-item-desc">
+            <span class="vi">Kiểm tra kết nối cổng camera hoặc mở cài đặt quyền truy cập của Windows.</span>
+            <span class="en">Verify camera hardware access or open Windows Privacy Settings.</span>
+          </p>
+          <div class="settings-actions-row">
+            <button class="btn-modal-action" id="btn-check-camera" type="button">
+              <span class="vi">Kiểm tra thiết bị</span><span class="en">Check Camera</span>
+            </button>
+            <button class="btn-modal-action btn-outline" id="btn-open-win-camera-settings" type="button">
+              <span class="vi">Quyền Windows</span><span class="en">Windows Permissions</span>
+            </button>
+          </div>
+          <div class="settings-feedback" id="camera-check-feedback" style="display:none;"></div>
+        </div>
+
+        <div style="display:none;"><input type="checkbox" id="toggle-face-blur"></div>
+
+        <div class="settings-group" id="telegram-settings-group">
+          <div class="settings-group-header">
+            <div class="settings-group-info">
+              <div class="settings-item-title">
+                <span><span class="vi">Cảnh báo qua Telegram</span><span class="en">Telegram Notifications</span></span>
+                <span class="badge-status-pill pill-off" id="telegram-status-pill">Off</span>
+              </div>
+              <p class="settings-item-desc">
+                <span class="vi">Gửi kịch bản cảnh báo kèm ảnh chụp mặt bể tới nhóm Telegram của ca trực.</span>
+                <span class="en">Send operational alert scenarios with basin snapshots to your Telegram group.</span>
+              </p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-telegram">
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <ol class="telegram-steps">
+            <li><span class="vi">Tạo bot qua <strong>@BotFather</strong> bằng lệnh <code>/newbot</code>.</span><span class="en">Create a bot via <strong>@BotFather</strong> using <code>/newbot</code>.</span></li>
+            <li><span class="vi">Nhập Bot Token bên dưới và bấm <strong>Lấy Chat ID</strong>.</span><span class="en">Paste Bot Token below and click <strong>Detect Chat ID</strong>.</span></li>
+          </ol>
+          <div class="telegram-field">
+            <label for="telegram-token-input">Bot Token</label>
+            <input type="password" id="telegram-token-input" class="cam-input" placeholder="123456789:AAH..." autocomplete="off" spellcheck="false">
+          </div>
+          <div class="telegram-field">
+            <label for="telegram-chat-input">Chat ID</label>
+            <div class="cam-input-action-row">
+              <input type="text" id="telegram-chat-input" class="cam-input" placeholder="123456789" autocomplete="off" spellcheck="false">
+              <button class="btn-modal-action btn-outline" id="btn-telegram-detect" type="button">Detect Chat ID</button>
+            </div>
+            <select id="telegram-chat-select" class="cam-select" style="display:none;"></select>
+          </div>
+          <div class="settings-actions-row">
+            <button class="btn-modal-action" id="btn-telegram-save" type="button">Save</button>
+            <button class="btn-modal-action btn-outline" id="btn-telegram-test" type="button">Send Test</button>
+          </div>
+          <div class="settings-feedback" id="telegram-feedback" style="display:none;"></div>
+        </div>
+
+        <div class="settings-group" id="update-settings-group" style="display:none;">
+          <span class="badge-status-pill" id="update-status-pill">v…</span>
+          <button id="btn-update-check" type="button"></button>
+          <button id="btn-update-download" type="button"></button>
+          <button id="btn-update-install" type="button"></button>
+          <div id="update-progress"><div id="update-progress-bar"></div></div>
+          <div id="update-notes"></div>
+          <div id="update-feedback"></div>
+        </div>
+
+        <div class="settings-group group-danger">
+          <div class="settings-group-header">
+            <div class="settings-group-info">
+              <div class="settings-item-title text-danger">
+                <span><span class="vi">Dừng dịch vụ máy trạm</span><span class="en">Shutdown Server</span></span>
+              </div>
+              <p class="settings-item-desc">
+                <span class="vi">Đóng tiến trình máy chủ giám sát trên thiết bị này.</span>
+                <span class="en">Terminate the local monitoring server process.</span>
+              </p>
+            </div>
+            <button class="btn-modal-danger" id="btn-modal-shutdown" type="button">Shutdown</button>
+          </div>
+        </div>
+
+        <div class="settings-info-box">
+          <div class="info-item"><span>Version</span> <strong class="num-mono">Iris Water <span id="app-version-text">v0.5.0</span></strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- XÁC THỰC ĐĂNG NHẬP -->
+  <div class="auth-modal-backdrop" id="auth-modal-backdrop" style="display:none;">
+    <div class="auth-modal-card">
+      <div class="auth-modal-header">
+        <span class="auth-code-tag" id="auth-icon-badge">AUTHENTICATION</span>
+        <h2 id="auth-modal-title">Đăng nhập hệ thống / Sign In</h2>
+        <p id="auth-modal-subtitle">Nhập thông tin tài khoản để truy cập màn hình giám sát bể xử lý nước thải.</p>
+      </div>
+      <form id="auth-form" class="auth-form" onsubmit="return false;">
+        <div class="auth-input-group">
+          <label for="auth-username-input">Username</label>
+          <input type="text" id="auth-username-input" class="cam-input" placeholder="admin" required autocomplete="username">
+        </div>
+        <div class="auth-input-group">
+          <label for="auth-password-input">Password</label>
+          <input type="password" id="auth-password-input" class="cam-input" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div class="auth-error-msg" id="auth-error-msg" style="display:none;"></div>
+        <div class="auth-action-row">
+          <button type="submit" id="btn-auth-submit" class="btn-modal-action btn-auth-submit">
+            <span id="auth-submit-txt">Sign In</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js?v=20261123_fix2"></script>
+</body>
+</html>

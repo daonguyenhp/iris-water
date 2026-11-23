@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="vi" data-lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iris Water — Hệ thống Giám sát Xử lý Nước thải / Smart Wastewater AI</title>
+  <meta name="description" content="Quan sát mặt bể, phân tích bất thường Hóa lý – Sinh học theo kịch bản và cảnh báo vận hành xử lý nước thải.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/logo.png?v=20261123_momo2">
+  <style>
+    :root {
+      --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-display: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+      --bg-canvas: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --brand: #0066cc;
+      --brand-light: #38bdf8;
+      --brand-soft: #eff6ff;
+      --brand-border: #bfdbfe;
+      --radius-lg: 24px;
+      --radius-xl: 32px;
+      --radius-pill: 999px;
+      --shadow-card: 0 12px 36px -8px rgba(0, 102, 204, 0.07), 0 4px 12px -2px rgba(15, 23, 42, 0.03);
+      --shadow-hover: 0 24px 48px -12px rgba(0, 102, 204, 0.14), 0 8px 20px -4px rgba(15, 23, 42, 0.05);
+      --container-max: 1240px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      font-size: 15px;
+      scroll-behavior: smooth;
+      scroll-padding-top: 96px;
+    }
+    body {
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+      background-color: var(--bg-canvas);
+      background-image:
+        radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.10), transparent 34%),
+        radial-gradient(circle at 88% 42%, rgba(0, 102, 204, 0.08), transparent 38%),
+        radial-gradient(circle at 20% 82%, rgba(56, 189, 248, 0.09), transparent 35%);
+      min-height: 100vh;
+      line-height: 1.65;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    html[data-lang="en"] .vi { display: none !important; }
+    html[data-lang="vi"] .en, html:not([data-lang="en"]) .en { display: none !important; }
+
+    a { color: inherit; text-decoration: none; }
+    .wrap { max-width: var(--container-max); width: calc(100% - 48px); margin: 0 auto; }
+    .text-brand { color: var(--brand); }
+
+    /* =========================================================================
+       1. EXACT MOMO CAREERS TOPBAR
+       ========================================================================= */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid #f1f5f9;
+      box-shadow: 0 2px 14px rgba(15, 23, 42, 0.03);
+    }
+    .topbar-inner {
+      height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .stacked-logo {
+      display: grid;
+      grid-template-columns: repeat(2, auto);
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 22px;
+      line-height: 0.84;
+      letter-spacing: -0.04em;
+      color: var(--brand);
+      text-transform: lowercase;
+      user-select: none;
+    }
+    .stacked-logo span { display: block; }
+    .brand-outline-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 15px;
+      border: 1.5px solid #93c5fd;
+      border-radius: 10px;
+      font-family: var(--font-display);
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #334155;
+      background: #ffffff;
+      line-height: 1.2;
+    }
+    .topbar-nav-links {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .clean-nav-link {
+      border: none;
+      background: transparent;
+      font-family: var(--font-display);
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #27272a;
+      cursor: pointer;
+      padding: 6px 0;
+      border-bottom: 2px solid transparent;
+      transition: color 0.18s ease, border-color 0.18s ease;
+    }
+    .clean-nav-link:hover,
+    .clean-nav-link.active {
+      color: var(--brand);
+    }
+    .clean-nav-link.active {
+      border-bottom-color: var(--brand);
+    }
+
+    /* =========================================================================
+       2. KEYFRAME ANIMATIONS FOR ARTWORK & FLOATING ELEMENTS
+       ========================================================================= */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-12px) rotate(1.5deg); }
+    }
+    @keyframes floatReverse {
+      0%, 100% { transform: translateY(0px) translateX(0px); }
+      50% { transform: translateY(10px) translateX(-6px); }
+    }
+    @keyframes pulseRing {
+      0% { transform: scale(0.92); opacity: 0.75; }
+      50% { transform: scale(1.06); opacity: 0.35; }
+      100% { transform: scale(0.92); opacity: 0.75; }
+    }
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes bubbleRise {
+      0% { transform: translateY(16px) scale(0.8); opacity: 0; }
+      40% { opacity: 0.85; }
+      100% { transform: translateY(-28px) scale(1.15); opacity: 0; }
+    }
+    @keyframes waveSlide {
+      0%, 100% { transform: translateX(0px); }
+      50% { transform: translateX(-14px); }
+    }
+    @keyframes scanBeam {
+      0%, 100% { transform: translateY(0px); opacity: 0.35; }
+      50% { transform: translateY(75px); opacity: 0.85; }
+    }
+
+    .art-float { animation: floatSlow 5.5s ease-in-out infinite; }
+    .art-float-delayed { animation: floatReverse 6.5s ease-in-out infinite; }
+    .art-pulse { animation: pulseRing 4s ease-in-out infinite; transform-origin: center; }
+    .art-spin { animation: spinSlow 14s linear infinite; transform-origin: center; }
+    .art-bubble-1 { animation: bubbleRise 3.4s ease-in infinite; }
+    .art-bubble-2 { animation: bubbleRise 4.2s ease-in 1.1s infinite; }
+    .art-bubble-3 { animation: bubbleRise 3.8s ease-in 2.2s infinite; }
+    .art-wave { animation: waveSlide 4.5s ease-in-out infinite; }
+    .art-scan { animation: scanBeam 3.6s ease-in-out infinite; }
+
+    /* Scroll reveal */
+    .reveal-section {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-section.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* =========================================================================
+       3. SPACIOUS SECTIONS WITH BREATHING ROOM (MOMO TALENT 2027 RHYTHM)
+       ========================================================================= */
+    .page-section {
+      padding: 108px 0;
+      position: relative;
+    }
+    .page-section + .page-section {
+      border-top: 1px dashed rgba(148, 163, 184, 0.25);
+    }
+
+    /* HERO SECTION: 2-Column with Animated 3D Basin Artwork */
+    .hero-section {
+      padding: 84px 0 116px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 64px;
+      align-items: center;
+    }
+    @media (max-width: 960px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 48px; text-align: center; }
+    }
+
+    .eyebrow-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--brand);
+      background: var(--brand-soft);
+      border: 1px solid var(--brand-border);
+      padding: 7px 16px;
+      border-radius: var(--radius-pill);
+      margin-bottom: 22px;
+    }
+    .eyebrow-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand);
+      box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.15);
+    }
+
+    .hero-copy h1 {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 4.2vw, 50px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.16;
+      margin-bottom: 22px;
+      color: var(--text-primary);
+    }
+    .hero-copy p {
+      font-size: 16.5px;
+      color: var(--text-secondary);
+      max-width: 54ch;
+      margin-bottom: 34px;
+      line-height: 1.7;
+    }
+    @media (max-width: 960px) {
+      .hero-copy p { margin-left: auto; margin-right: auto; }
+    }
+
+    .hero-cta-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 42px;
+    }
+    @media (max-width: 960px) {
+      .hero-cta-group { justify-content: center; }
+    }
+
+    .btn-primary-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--brand);
+      color: #ffffff;
+      font-size: 15.5px;
+      font-weight: 700;
+      padding: 15px 32px;
+      border-radius: var(--radius-pill);
+      box-shadow: 0 12px 28px -6px rgba(0, 102, 204, 0.42);
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    .btn-primary-pill:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 34px -6px rgba(0, 102, 204, 0.52);
+    }
+    .btn-secondary-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      color: var(--text-primary);
+      border: 1.5px solid #cbd5e1;
+      font-size: 15.5px;
+      font-weight: 700;
+      padding: 14px 28px;
+      border-radius: var(--radius-pill);
+      transition: all 0.2s ease;
+    }
+    .btn-secondary-pill:hover {
+      border-color: var(--brand);
+      color: var(--brand);
+      transform: translateY(-2px);
+    }
+
+    .hero-mini-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+    }
+    .mini-metric strong {
+      display: block;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--brand);
+      letter-spacing: -0.02em;
+    }
+    .mini-metric span {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Hero Animated Artwork Stage */
+    .hero-art-stage {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .hero-art-card {
+      width: 100%;
+      max-width: 520px;
+      background: linear-gradient(145deg, #ffffff 0%, #f0f7ff 100%);
+      border: 1.5px solid #dbeafe;
+      border-radius: var(--radius-xl);
+      padding: 28px;
+      box-shadow: var(--shadow-hover);
+      position: relative;
+    }
+    .floating-chip {
+      position: absolute;
+      background: #ffffff;
+      border: 1.5px solid #bfdbfe;
+      border-radius: 16px;
+      padding: 10px 16px;
+      box-shadow: 0 12px 24px rgba(0, 102, 204, 0.12);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      z-index: 3;
+    }
+    .floating-chip-top {
+      top: -16px;
+      left: -18px;
+    }
+    .floating-chip-bottom {
+      bottom: -18px;
+      right: -14px;
+    }
+    .chip-led {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #0066cc;
+      box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.18);
+    }
+
+    /* =========================================================================
+       4. SECTION HEADERS & INTERACTIVE TRACKS ("PICK YOUR TRACK" STYLE)
+       ========================================================================= */
+    .sec-head {
+      text-align: center;
+      max-width: 960px;
+      margin: 0 auto 56px;
+    }
+    .sec-head h2 {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 3.2vw, 38px);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 14px;
+      line-height: 1.25;
+      text-wrap: balance;
+    }
+    .sec-head p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .showcase-tabs-bar {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 44px;
+    }
+    .sc-tab {
+      border: 1.5px solid var(--border);
+      background: #ffffff;
+      color: var(--text-secondary);
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      padding: 13px 28px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.22s ease;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+    }
+    .sc-tab:hover {
+      border-color: var(--brand);
+      color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .sc-tab.active {
+      background: var(--brand);
+      color: #ffffff;
+      border-color: var(--brand);
+      box-shadow: 0 10px 24px -4px rgba(0, 102, 204, 0.36);
+    }
+
+    .sc-panel {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      align-items: stretch;
+      margin-bottom: 36px;
+    }
+    .sc-panel:last-child {
+      margin-bottom: 0;
+    }
+    @media (max-width: 920px) {
+      .sc-panel { grid-template-columns: 1fr; }
+    }
+    @keyframes panelFade {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Spacious Art Bento Cards */
+    .bento-card {
+      background: var(--bg-surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 34px 30px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      transition: transform 0.26s ease, box-shadow 0.26s ease, border-color 0.26s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .bento-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-hover);
+      border-color: var(--brand-border);
+    }
+    .bento-art-box {
+      width: 68px;
+      height: 68px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 1px solid #bfdbfe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+    }
+    .bento-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .bento-badge {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--brand);
+      background: var(--brand-soft);
+      padding: 5px 14px;
+      border-radius: var(--radius-pill);
+    }
+    .bento-num {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #94a3b8;
+    }
+    .bento-card h3 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.3;
+      color: var(--text-primary);
+    }
+    .bento-card p {
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      flex: 1;
+    }
+
+    /* =========================================================================
+       5. 4-BASIN PROCESS STEPPER WITH ANIMATED CONNECTOR ART
+       ========================================================================= */
+    .journey-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 26px;
+      align-items: stretch;
+    }
+    @media (max-width: 980px) { .journey-grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .journey-grid-4 { grid-template-columns: 1fr; } }
+
+    .journey-step {
+      background: var(--bg-surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px 26px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .journey-step:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-hover);
+      border-color: var(--brand-border);
+    }
+    .journey-art-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .j-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: var(--brand);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 18px rgba(0, 102, 204, 0.25);
+    }
+    .journey-step h3 {
+      font-size: 18.5px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+    .journey-step p {
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    /* =========================================================================
+       6. MOMO-STYLE 2-COLUMN GUIDE & FAQ ACCORDION SECTION
+       ========================================================================= */
+    .momo-faq-split {
+      display: grid;
+      grid-template-columns: 0.36fr 0.64fr;
+      gap: 64px;
+      align-items: flex-start;
+    }
+    @media (max-width: 960px) {
+      .momo-faq-split {
+        grid-template-columns: 1fr;
+        gap: 36px;
+      }
+    }
+    .momo-faq-left {
+      position: sticky;
+      top: 112px;
+    }
+    @media (max-width: 960px) {
+      .momo-faq-left {
+        position: static;
+      }
+    }
+    .momo-faq-left h2 {
+      font-family: var(--font-display);
+      font-size: clamp(28px, 3.4vw, 38px);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.18;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+    .momo-faq-left p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.68;
+      margin-bottom: 28px;
+    }
+    .btn-outline-brand {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      border: 1.5px solid var(--brand);
+      border-radius: 12px;
+      color: var(--brand);
+      background: #ffffff;
+      font-family: var(--font-display);
+      font-size: 14.5px;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .btn-outline-brand:hover {
+      background: var(--brand);
+      color: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px -6px rgba(0, 102, 204, 0.35);
+    }
+
+    .momo-accordion-list {
+      width: 100%;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 8px 32px;
+      box-shadow: var(--shadow-card);
+    }
+    @media (max-width: 640px) {
+      .momo-accordion-list {
+        padding: 6px 20px;
+      }
+    }
+    .momo-acc-item {
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .momo-acc-item:last-child {
+      border-bottom: none;
+    }
+    .momo-acc-trigger {
+      width: 100%;
+      border: none;
+      background: transparent;
+      padding: 22px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      text-align: left;
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: color 0.18s ease;
+    }
+    .momo-acc-trigger:hover {
+      color: var(--brand);
+    }
+    .momo-acc-item.open .momo-acc-trigger {
+      color: var(--brand);
+    }
+    .momo-acc-chevron {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      color: #475569;
+      transition: transform 0.24s ease, color 0.18s ease;
+    }
+    .momo-acc-item.open .momo-acc-chevron {
+      transform: rotate(180deg);
+      color: var(--brand);
+    }
+    .momo-acc-panel {
+      display: none;
+      padding: 0 0 24px 0;
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.72;
+    }
+    .momo-acc-item.open .momo-acc-panel {
+      display: block;
+      animation: panelFade 0.22s ease;
+    }
+    .momo-acc-panel ul {
+      margin: 10px 0 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cmd-pill-box {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      margin-top: 14px;
+      display: block;
+      width: 100%;
+      overflow-x: auto;
+    }
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    footer {
+      padding: 40px 0 76px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* Sticky Bottom Translucent CTA Bar (See-through tint, readable text underneath) */
+    .sticky-bottom-cta-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 95;
+      height: 46px;
+      background: rgba(219, 234, 254, 0.34);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-top: 1px solid rgba(147, 197, 253, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .btn-try-it-now {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 102, 204, 0.85);
+      color: #ffffff;
+      font-family: var(--font-display);
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 7px 18px;
+      border-radius: 7px;
+      box-shadow: 0 3px 10px -2px rgba(0, 102, 204, 0.24);
+      transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .btn-try-it-now:hover {
+      background: #0066cc;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px -4px rgba(0, 102, 204, 0.42);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. THANH TOPBAR CHUẨN MOMO CAREERS -->
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="/">
+        <div class="stacked-logo" aria-label="IRIS">
+          <span>ir</span>
+          <span>is</span>
+        </div>
+        <span class="brand-outline-badge">
+          <span class="vi">Nước thải</span>
+          <span class="en">Wastewater</span>
+        </span>
+      </a>
+
+      <nav class="topbar-nav-links" aria-label="Main Navigation">
+        <a class="clean-nav-link active" href="#section-about" data-scroll-spy="section-about">
+          <span class="vi">Giới thiệu</span>
+          <span class="en">Overview</span>
+        </a>
+        <a class="clean-nav-link" href="#section-tracks" data-scroll-spy="section-tracks">
+          <span class="vi">Tính năng chính</span>
+          <span class="en">Key Features</span>
+        </a>
+        <a class="clean-nav-link" href="#section-journey" data-scroll-spy="section-journey">
+          <span class="vi">Quy trình 4 bể</span>
+          <span class="en">4-Basin Flow</span>
+        </a>
+        <a class="clean-nav-link" href="#section-guide" data-scroll-spy="section-guide">
+          <span class="vi">Hướng dẫn &amp; Hỏi đáp</span>
+          <span class="en">Guide &amp; FAQs</span>
+        </a>
+        <a class="clean-nav-link" id="btn-open-ops" href="/app">
+          <span class="vi">Màn hình giám sát</span>
+          <span class="en">Live Console</span>
+        </a>
+        <button type="button" class="clean-nav-link" id="btn-home-lang" title="Switch Language">
+          <span class="vi">EN</span>
+          <span class="en">VI</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <!-- =======================================================================
+         PHẦN 1: HERO & HOẠT ẢNH MẶT BỂ AI (GIỚI THIỆU)
+         ======================================================================= -->
+    <section class="hero-section reveal-section is-visible" id="section-about">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow-badge">
+            <span class="eyebrow-dot"></span>
+            <span class="vi">Iris Water · Hệ thống quan sát bể xử lý nước thải</span>
+            <span class="en">Iris Water · Smart Wastewater Basin Monitoring</span>
+          </span>
+          <h1>
+            <span class="vi">Theo dõi mặt bể <span class="text-brand">Hóa lý &amp; Sinh học</span> tự động, dễ hiểu</span>
+            <span class="en">Simple, Automated <span class="text-brand">Wastewater Basin</span> Monitoring</span>
+          </h1>
+          <p>
+            <span class="vi">Tự động quan sát mặt bể qua camera để đo lượng bọt nổi, kiểm tra màu nước, độ trong, chất lượng bùn và phát hiện rác trôi nổi, giúp người trực ca xử lý sự cố kịp thời.</span>
+            <span class="en">Automatically watches basin surfaces via camera to measure floating foam, check water color, clarity, sludge health, and spot floating trash for timely operator action.</span>
+          </p>
+
+          <div class="hero-cta-group">
+            <a class="btn-primary-pill" id="btn-hero-ops" href="/app">
+              <span class="vi">Mở màn hình giám sát</span>
+              <span class="en">Open Live Console</span>
+              <span>→</span>
+            </a>
+            <a class="btn-secondary-pill" href="#section-guide">
+              <span class="vi">Xem hướng dẫn sử dụng ↓</span>
+              <span class="en">Read User Guide ↓</span>
+            </a>
+          </div>
+
+          <div class="hero-mini-metrics">
+            <div class="mini-metric">
+              <strong>Tức thì</strong>
+              <span><span class="vi">Phân tích hình ảnh trực tiếp</span><span class="en">Real-time video analysis</span></span>
+            </div>
+            <div class="mini-metric">
+              <strong>12 chỉ số</strong>
+              <span><span class="vi">Bọt, màu nước, bùn và rác nổi</span><span class="en">Foam, color, sludge &amp; trash</span></span>
+            </div>
+            <div class="mini-metric">
+              <strong>24/7</strong>
+              <span><span class="vi">Gợi ý cách xử lý và báo tin nhắn</span><span class="en">Action tips &amp; mobile alerts</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hoạt ảnh Nghệ thuật SVG Mặt bể & Radar Phân vùng AI -->
+        <div class="hero-art-stage">
+          <div class="hero-art-card art-float">
+            <div class="floating-chip floating-chip-top art-float-delayed">
+              <span class="chip-led"></span>
+              <span><span class="vi">Lượng bọt nổi: 29.4% · Cần chú ý</span><span class="en">Floating Foam: 29.4% · Warning</span></span>
+            </div>
+
+            <svg viewBox="0 0 460 340" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animated AI Wastewater Basin Illustration">
+              <defs>
+                <linearGradient id="basinWaterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#0066cc" stop-opacity="0.16"/>
+                  <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.28"/>
+                  <stop offset="100%" stop-color="#0066cc" stop-opacity="0.42"/>
+                </linearGradient>
+                <linearGradient id="scanLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#0066cc" stop-opacity="0"/>
+                  <stop offset="50%" stop-color="#0066cc" stop-opacity="0.85"/>
+                  <stop offset="100%" stop-color="#0066cc" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+
+              <!-- Vòng hào quang nền -->
+              <circle cx="230" cy="170" r="138" fill="#eff6ff" class="art-pulse"/>
+              <circle cx="230" cy="170" r="116" fill="none" stroke="#bfdbfe" stroke-width="1.5" stroke-dasharray="6 6" class="art-spin"/>
+
+              <!-- Khung Bể Chữ Nhật Isometric -->
+              <rect x="48" y="56" width="364" height="228" rx="22" fill="url(#basinWaterGrad)" stroke="#0066cc" stroke-width="2.5"/>
+              <rect x="64" y="72" width="332" height="196" rx="14" fill="none" stroke="#0066cc" stroke-width="1.2" stroke-dasharray="5 5" opacity="0.65"/>
+
+              <!-- Sóng nước chuyển động -->
+              <g class="art-wave" opacity="0.55">
+                <path d="M 75 140 Q 130 124, 185 140 T 295 140 T 385 140" fill="none" stroke="#0066cc" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M 85 195 Q 145 178, 205 195 T 325 195 T 380 195" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round"/>
+              </g>
+
+              <!-- Đám bọt nổi -->
+              <g class="art-float-delayed">
+                <path d="M 92 108 C 112 88, 165 88, 184 106 C 204 124, 192 158, 162 164 C 128 170, 96 154, 86 134 C 78 120, 82 115, 92 108 Z"
+                      fill="#ffffff" fill-opacity="0.88" stroke="#0066cc" stroke-width="2"/>
+                <circle cx="122" cy="122" r="10" fill="#dbeafe"/>
+                <circle cx="152" cy="118" r="14" fill="#eff6ff"/>
+                <circle cx="140" cy="142" r="9" fill="#dbeafe"/>
+                <text x="108" y="128" font-family="Plus Jakarta Sans, sans-serif" font-size="11" font-weight="800" fill="#0066cc">VÙNG BỌT NỔI</text>
+              </g>
+
+              <!-- Cụm bọt thứ 2 -->
+              <g class="art-float">
+                <path d="M 258 164 C 278 148, 336 150, 354 172 C 370 192, 356 226, 322 232 C 288 238, 254 222, 248 196 C 244 180, 248 172, 258 164 Z"
+                      fill="#ffffff" fill-opacity="0.88" stroke="#0066cc" stroke-width="2"/>
+                <circle cx="290" cy="188" r="12" fill="#dbeafe"/>
+                <circle cx="322" cy="196" r="15" fill="#eff6ff"/>
+                <text x="272" y="194" font-family="Plus Jakarta Sans, sans-serif" font-size="11" font-weight="800" fill="#0066cc">BÙN &amp; BỌT KHÍ</text>
+              </g>
+
+              <!-- Bọt khí sục bay lên -->
+              <circle cx="220" cy="220" r="6" fill="#0066cc" opacity="0.5" class="art-bubble-1"/>
+              <circle cx="242" cy="235" r="8" fill="#38bdf8" opacity="0.6" class="art-bubble-2"/>
+              <circle cx="195" cy="240" r="5" fill="#0066cc" opacity="0.45" class="art-bubble-3"/>
+              <circle cx="310" cy="135" r="7" fill="#38bdf8" opacity="0.55" class="art-bubble-1"/>
+
+              <!-- Khung đo độ trong -->
+              <g>
+                <rect x="278" y="88" width="96" height="48" rx="8" fill="#ffffff" fill-opacity="0.75" stroke="#0066cc" stroke-width="2" stroke-dasharray="4 3"/>
+                <circle cx="302" cy="112" r="9" fill="#0066cc" opacity="0.22"/>
+                <text x="288" y="106" font-family="Plus Jakarta Sans, sans-serif" font-size="10" font-weight="800" fill="#0066cc">MÀU NƯỚC</text>
+                <text x="288" y="122" font-family="Plus Jakarta Sans, sans-serif" font-size="10" font-weight="700" fill="#334155">Độ trong 84%</text>
+              </g>
+
+              <!-- Tia quét AI Vision -->
+              <rect x="64" y="95" width="332" height="3" fill="url(#scanLineGrad)" class="art-scan"/>
+
+              <!-- 4 Góc ngắm Camera -->
+              <path d="M 64 90 L 64 72 L 82 72" fill="none" stroke="#0066cc" stroke-width="3" stroke-linecap="round"/>
+              <path d="M 378 72 L 396 72 L 396 90" fill="none" stroke="#0066cc" stroke-width="3" stroke-linecap="round"/>
+              <path d="M 64 250 L 64 268 L 82 268" fill="none" stroke="#0066cc" stroke-width="3" stroke-linecap="round"/>
+              <path d="M 378 268 L 396 268 L 396 250" fill="none" stroke="#0066cc" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+
+            <div class="floating-chip floating-chip-bottom art-float">
+              <span class="chip-led"></span>
+              <span><span class="vi">Chẩn đoán tự động: Đang hoạt động</span><span class="en">Automated Diagnosis: Active</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         PHẦN 2: TÍNH NĂNG GIÁM SÁT THEO TỪNG BỂ
+         ======================================================================= -->
+    <section class="page-section reveal-section" id="section-tracks">
+      <div class="sec-head">
+        <span class="eyebrow-badge">
+          <span class="eyebrow-dot"></span>
+          <span class="vi">Tính năng chính theo từng bể</span>
+          <span class="en">Stage-by-Stage Capabilities</span>
+        </span>
+        <h2>
+          <span class="vi">Hệ thống quan sát <span class="text-brand">những gì trên mặt bể?</span></span>
+          <span class="en">What the System <span class="text-brand">Watches on Your Basins</span></span>
+        </h2>
+        <p>
+          <span class="vi">Kết hợp hình ảnh từ camera với các chỉ số vận hành tại bể để phát hiện sớm dấu hiệu bất thường và gợi ý cách xử lý rõ ràng cho người trực.</span>
+          <span class="en">Combines live camera imagery with basin operating readings to spot early abnormalities and give clear action tips for operators.</span>
+        </p>
+      </div>
+
+      <div class="showcase-tabs-bar" style="display:none;"></div>
+
+      <!-- Track 1: Hóa lý -->
+      <div class="sc-panel active" id="sc-t1">
+        <article class="bento-card">
+          <div class="bento-top">
+            <div class="bento-art-box">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                <circle cx="20" cy="20" r="14" stroke="#0066cc" stroke-width="2.2" class="art-pulse"/>
+                <path d="M20 10 C15 17, 13 21, 13 25 A7 7 0 0 0 27 25 C27 21, 25 17, 20 10 Z" fill="#0066cc" fill-opacity="0.22" stroke="#0066cc" stroke-width="2"/>
+              </svg>
+            </div>
+            <span class="bento-badge"><span class="vi">Bể Hóa lý · Màu &amp; Độ trong</span><span class="en">Physicochemical · Color &amp; Clarity</span></span>
+          </div>
+          <h3><span class="vi">Màu nước &amp; Độ trong suốt</span><span class="en">Water Color &amp; Clarity</span></h3>
+          <p><span class="vi">Tự động nhận biết màu nước đầu vào và đầu ra ngay cả khi nắng gắt hay trời râm, đồng thời chấm điểm độ trong của nước qua hình ảnh phản chiếu trên mặt bể.</span><span class="en">Automatically checks inlet and outlet water color under sunny or cloudy weather, and scores water clarity from surface reflections.</span></p>
+        </article>
+
+        <article class="bento-card">
+          <div class="bento-top">
+            <div class="bento-art-box">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                <circle cx="15" cy="18" r="6" fill="#0066cc" fill-opacity="0.2" stroke="#0066cc" stroke-width="2" class="art-float"/>
+                <circle cx="26" cy="15" r="4.5" fill="#0066cc" fill-opacity="0.25" stroke="#0066cc" stroke-width="2" class="art-float-delayed"/>
+                <circle cx="23" cy="26" r="5.5" fill="#0066cc" fill-opacity="0.18" stroke="#0066cc" stroke-width="2" class="art-float"/>
+              </svg>
+            </div>
+            <span class="bento-badge"><span class="vi">Bể Hóa lý · Bông cặn</span><span class="en">Physicochemical · Flocs</span></span>
+          </div>
+          <h3><span class="vi">Cặn nổi &amp; Cặn lắng dưới bể</span><span class="en">Floating &amp; Settling Flocs</span></h3>
+          <p><span class="vi">Theo dõi độ kết dính của lớp cặn nổi trên mặt bể và cảnh báo sớm khi cặn không lắng hết, tránh để chất bẩn tràn sang làm hỏng bể vi sinh phía sau.</span><span class="en">Watches how evenly floating flocs form on the surface and warns early if unsettled particles risk spilling into the biological tank.</span></p>
+        </article>
+
+        <article class="bento-card">
+          <div class="bento-top">
+            <div class="bento-art-box">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                <g class="art-spin">
+                  <circle cx="20" cy="20" r="4" fill="#0066cc"/>
+                  <path d="M20 7 V13 M20 27 V33 M7 20 H13 M27 20 H33 M11 11 L15 15 M25 25 L29 29 M29 11 L25 15 M15 25 L11 29" stroke="#0066cc" stroke-width="2.4" stroke-linecap="round"/>
+                </g>
+              </svg>
+            </div>
+            <span class="bento-badge"><span class="vi">Bể Hóa lý · Thiết bị</span><span class="en">Physicochemical · Equipment</span></span>
+          </div>
+          <h3><span class="vi">Vật cản nổi lớn &amp; Tốc độ cánh khuấy</span><span class="en">Large Trash &amp; Mixer Speed</span></h3>
+          <p><span class="vi">Phát hiện sớm các vật nổi lớn có nguy cơ làm nghẹt máy bơm và kết hợp với tốc độ quay cánh khuấy để kiểm tra hiệu quả hòa trộn hóa chất.</span><span class="en">Detects large floating objects before they clog pumps and checks mixer rotation speed for proper chemical mixing.</span></p>
+        </article>
+      </div>
+
+      <!-- Track 2: Sinh học -->
+      <div class="sc-panel" id="sc-t2">
+        <article class="bento-card">
+          <div class="bento-top">
+            <div class="bento-art-box">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                <rect x="8" y="10" width="24" height="20" rx="6" stroke="#0066cc" stroke-width="2"/>
+                <circle cx="15" cy="20" r="3" fill="#0066cc" class="art-pulse"/>
+                <circle cx="25" cy="18" r="4" fill="#0066cc" fill-opacity="0.5" class="art-float"/>
+                <circle cx="21" cy="24" r="2.5" fill="#0066cc"/>
+              </svg>
+            </div>
+            <span class="bento-badge"><span class="vi">Bể Sinh học · Vi sinh</span><span class="en">Biological · Sludge Health</span></span>
+          </div>
+          <h3><span class="vi">Đánh giá chất lượng Bùn vi sinh</span><span class="en">Healthy Activated Sludge</span></h3>
+          <p><span class="vi">Quan sát màu sắc, kích thước hạt bùn và độ phủ đều trên mặt bể để biết vi sinh vật có đang khỏe mạnh và làm sạch nước tốt hay không.</span><span class="en">Inspects sludge color, particle size, and surface spread to confirm that microbes are healthy and cleaning effectively.</span></p>
+        </article>
+
+        <article class="bento-card">
+          <div class="bento-top">
+            <div class="bento-art-box">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                <circle cx="14" cy="26" r="3.5" stroke="#0066cc" stroke-width="2" class="art-bubble-1"/>
+                <circle cx="22" cy="28" r="4.5" stroke="#0066cc" stroke-width="2" class="art-bubble-2"/>
+                <circle cx="28" cy="25" r="3" stroke="#0066cc" stroke-width="2" class="art-bubble-3"/>
+                <path d="M9 32 H31" stroke="#0066cc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span class="bento-badge"><span class="vi">Bể Sinh học · Sục khí</span><span class="en">Biological · Aeration</span></span>
+          </div>
+          <h3><span class="vi">Kiểm tra Bọt khí &amp; Tiết kiệm điện</span><span class="en">Aeration Bubbles &amp; Power Saving</span></h3>
+          <p><span class="vi">Nếu mặt bể mất bọt khí ⇒ báo động thiếu oxy làm chết vi sinh. Nếu bọt nổi dày đặc ⇒ nhắc giảm máy thổi khí để tránh tốn điện và nhanh hỏng máy.</span><span class="en">No bubbles ⇒ warns of low oxygen harming microbes. Excessive foam ⇒ suggests lowering blower speed to save electricity and reduce wear.</span></p>
+        </article>
+
+        <article class="bento-card">
+          <div class="bento-top">
+            <div class="bento-art-box">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                <path d="M12 14 H28 L26 30 H14 L12 14 Z" fill="#0066cc" fill-opacity="0.16" stroke="#0066cc" stroke-width="2"/>
+                <path d="M9 20 H31" stroke="#0066cc" stroke-width="2" stroke-dasharray="3 3" class="art-wave"/>
+              </svg>
+            </div>
+            <span class="bento-badge"><span class="vi">Đầu ra · Rác nhựa &amp; Đèn khử trùng</span><span class="en">Effluent · Trash &amp; UV Lamp</span></span>
+          </div>
+          <h3><span class="vi">Rác nhựa, Đèn khử trùng &amp; Nước sạch</span><span class="en">Plastic Trash, UV Lamp &amp; Clean Outlet</span></h3>
+          <p><span class="vi">Phát hiện túi nilon, mảnh nhựa rơi vào bể, kiểm tra đèn chiếu diệt khuẩn có sáng đều không và đánh giá độ trong của nước trước khi xả ra ngoài.</span><span class="en">Spots plastic bags and fragments in the basin, checks if UV disinfection lights shine evenly, and verifies final water clarity.</span></p>
+        </article>
+      </div>
+
+      <!-- Track 3: 4 Tasks & Cảnh báo -->
+      <div class="sc-panel" id="sc-t3">
+        <article class="bento-card">
+          <div class="bento-top">
+            <div class="bento-art-box">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                <rect x="8" y="10" width="24" height="20" rx="4" stroke="#0066cc" stroke-width="2"/>
+                <path d="M10 22 Q16 15, 22 20 T30 16 L30 28 L10 28 Z" fill="#0066cc" fill-opacity="0.25"/>
+              </svg>
+            </div>
+            <span class="bento-badge"><span class="vi">Đo lượng bọt tự động</span><span class="en">Automated Foam Measure</span></span>
+          </div>
+          <h3><span class="vi">Tính tỷ lệ bọt phủ mặt bể</span><span class="en">Basin Foam Coverage Percentage</span></h3>
+          <p><span class="vi">Tự động tô màu vùng bọt trắng và tính xem lớp bọt đang chiếm bao nhiêu phần trăm mặt bể, đồng thời có sẵn bộ ảnh và video mẫu để xem thử ngay.</span><span class="en">Highlights floating foam and calculates what percentage of the basin surface is covered, with built-in sample photos and videos ready to test.</span></p>
+        </article>
+
+        <article class="bento-card">
+          <div class="bento-top">
+            <div class="bento-art-box">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                <circle cx="20" cy="20" r="11" stroke="#0066cc" stroke-width="2"/>
+                <path d="M20 9 A11 11 0 0 1 31 20 H20 Z" fill="#0066cc" fill-opacity="0.3" class="art-spin"/>
+              </svg>
+            </div>
+            <span class="bento-badge"><span class="vi">Nhận diện màu &amp; Rác nổi</span><span class="en">Color &amp; Trash Detection</span></span>
+          </div>
+          <h3><span class="vi">Đo màu nước &amp; Khoanh vùng rác nổi</span><span class="en">Water Color &amp; Trash Highlighting</span></h3>
+          <p><span class="vi">Phân biệt nước xanh trong, nước vàng đục hay nâu bùn dưới ánh nắng mặt trời và vẽ khung cảnh báo quanh túi nilon, mảnh nhựa hay lớp váng dầu.</span><span class="en">Distinguishes clear green, murky yellow, or muddy brown water under outdoor sunlight and draws boxes around floating plastics or oil sheen.</span></p>
+        </article>
+
+        <article class="bento-card">
+          <div class="bento-top">
+            <div class="bento-art-box">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                <path d="M8 26 L16 18 L22 23 L32 12" stroke="#0066cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="32" cy="12" r="3.5" fill="#0066cc" class="art-pulse"/>
+              </svg>
+            </div>
+            <span class="bento-badge"><span class="vi">Gợi ý xử lý &amp; Báo điện thoại</span><span class="en">Action Tips &amp; Phone Alerts</span></span>
+          </div>
+          <h3><span class="vi">Hướng dẫn cách xử lý &amp; Báo tin nhắn</span><span class="en">Clear Action Advice &amp; Mobile Alerts</span></h3>
+          <p><span class="vi">Khi có bất thường, màn hình sẽ ghi rõ nguyên nhân và hướng dẫn người trực cần chỉnh máy khuấy, máy sục khí ra sao, đồng thời gửi ảnh về điện thoại.</span><span class="en">When an issue occurs, the screen explains the cause and tells operators how to adjust mixers or blowers, while sending a photo alert to their phone.</span></p>
+        </article>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         PHẦN 3: QUY TRÌNH 4 BỂ GIÁM SÁT KHÉP KÍN
+         ======================================================================= -->
+    <section class="page-section reveal-section" id="section-journey">
+      <div class="sec-head">
+        <span class="eyebrow-badge">
+          <span class="eyebrow-dot"></span>
+          <span class="vi">Quy trình khép kín toàn nhà máy</span>
+          <span class="en">End-to-End Plant Workflow</span>
+        </span>
+        <h2>
+          <span class="vi">Theo dõi liên tục qua <span class="text-brand">4 Bể Xử lý Nước</span></span>
+          <span class="en">Continuous Monitoring Across <span class="text-brand">4 Treatment Basins</span></span>
+        </h2>
+        <p>
+          <span class="vi">Kiểm soát chất lượng nước từ lúc mới chảy vào nhà máy, qua bước lắng cặn hóa chất, nuôi vi sinh làm sạch cho đến khi khử trùng xả ra ngoài.</span>
+          <span class="en">Controls water quality from raw intake through chemical settling and microbial cleaning to final disinfection and discharge.</span>
+        </p>
+      </div>
+
+      <div class="journey-grid-4">
+        <div class="journey-step">
+          <div class="journey-art-header">
+            <span class="j-circle">01</span>
+            <svg width="42" height="42" viewBox="0 0 44 44" fill="none">
+              <rect x="6" y="12" width="32" height="22" rx="6" fill="#eff6ff" stroke="#0066cc" stroke-width="1.8"/>
+              <path d="M10 22 Q16 18, 22 22 T34 22" stroke="#0066cc" stroke-width="2" fill="none" class="art-wave"/>
+            </svg>
+          </div>
+          <h3><span class="vi">Bể Điều hòa đầu vào</span><span class="en">Inlet Equalization Basin</span></h3>
+          <p><span class="vi">Kiểm tra màu nước thải mới chảy vào và phát hiện sớm các mảnh rác to để tránh làm kẹt máy bơm.</span><span class="en">Checks incoming raw water color and spots large trash early to prevent pump jams.</span></p>
+        </div>
+
+        <div class="journey-step">
+          <div class="journey-art-header">
+            <span class="j-circle">02</span>
+            <svg width="42" height="42" viewBox="0 0 44 44" fill="none">
+              <circle cx="22" cy="22" r="14" fill="#eff6ff" stroke="#0066cc" stroke-width="1.8"/>
+              <path d="M22 12 V32 M12 22 H32" stroke="#0066cc" stroke-width="2" stroke-linecap="round" class="art-spin"/>
+            </svg>
+          </div>
+          <h3><span class="vi">Bể Hóa lý &amp; Tuyển nổi</span><span class="en">Physicochemical Basin</span></h3>
+          <p><span class="vi">Theo dõi lớp cặn nổi, cặn lắng, váng dầu và tốc độ máy khuấy hóa chất để giữ lại chất bẩn trước khi qua bể vi sinh.</span><span class="en">Monitors floating and settling particles, oil sheen, and mixer speed to trap pollutants before the biological tank.</span></p>
+        </div>
+
+        <div class="journey-step">
+          <div class="journey-art-header">
+            <span class="j-circle">03</span>
+            <svg width="42" height="42" viewBox="0 0 44 44" fill="none">
+              <rect x="6" y="12" width="32" height="22" rx="6" fill="#eff6ff" stroke="#0066cc" stroke-width="1.8"/>
+              <circle cx="16" cy="24" r="3.5" fill="#0066cc" fill-opacity="0.35" class="art-bubble-1"/>
+              <circle cx="24" cy="22" r="4.5" fill="#0066cc" fill-opacity="0.25" class="art-bubble-2"/>
+              <circle cx="30" cy="26" r="3" fill="#0066cc" fill-opacity="0.4" class="art-bubble-3"/>
+            </svg>
+          </div>
+          <h3><span class="vi">Bể Vi sinh hiếu khí</span><span class="en">Biological Aeration Basin</span></h3>
+          <p><span class="vi">Đo tỷ lệ bọt trắng trên mặt bể, kiểm tra độ khỏe của bùn vi sinh, lượng bọt khí sục và lượng oxy trong nước.</span><span class="en">Measures surface white foam, checks microbial sludge health, aeration bubbles, and dissolved oxygen levels.</span></p>
+        </div>
+
+        <div class="journey-step">
+          <div class="journey-art-header">
+            <span class="j-circle">04</span>
+            <svg width="42" height="42" viewBox="0 0 44 44" fill="none">
+              <circle cx="22" cy="22" r="13" fill="#eff6ff" stroke="#0066cc" stroke-width="1.8" class="art-pulse"/>
+              <path d="M16 22 L20 26 L28 18" stroke="#0066cc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3><span class="vi">Bể Lắng &amp; Khử trùng đầu ra</span><span class="en">Clarifier &amp; Outlet Disinfection</span></h3>
+          <p><span class="vi">Đánh giá độ trong vắt của nước sau xử lý và kiểm tra đèn chiếu diệt khuẩn trước khi xả nước sạch ra môi trường.</span><span class="en">Verifies final water clarity and checks disinfection lamps before discharging clean water.</span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         PHẦN 4: HƯỚNG DẪN & HỎI ĐÁP GỘP CHUNG 2 CỘT CHUẨN MOMO TALENT
+         ======================================================================= -->
+    <section class="page-section reveal-section" id="section-guide">
+      <div class="momo-faq-split">
+
+        <!-- Cột trái: Tiêu đề + Mô tả + Nút viền gọn gàng -->
+        <div class="momo-faq-left">
+          <h2>
+            <span class="vi">Cần hướng dẫn hoặc có thắc mắc về Iris Water?</span>
+            <span class="en">Need guidance or got questions about Iris Water?</span>
+          </h2>
+          <p>
+            <span class="vi">Chúng tôi đã tổng hợp trọn bộ các bước khởi động phần mềm, cách xem màn hình theo dõi bể, cách nối camera và giải đáp các câu hỏi thường gặp ngay bên cạnh. Bấm vào từng dòng để xem chi tiết!</span>
+            <span class="en">We've gathered all startup steps, screen instructions, camera connection guides, and frequently asked questions right here. Click any item to expand!</span>
+          </p>
+          <a class="btn-outline-brand" href="/app">
+            <span class="vi">Mở màn hình giám sát ngay</span>
+            <span class="en">Open Live Console now</span>
+          </a>
+        </div>
+
+        <!-- Cột phải: Danh sách câu hỏi & hướng dẫn bấm mở mũi tên xuống -->
+        <div class="momo-accordion-list" id="guide-faq-accordion">
+
+          <div class="momo-acc-item open">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Làm sao để bật phần mềm và xem thử video bể mẫu trong 30 giây?</span>
+                <span class="en">How do I start the software and play the sample basin video in 30 seconds?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Bạn không cần gắn camera thật ngay từ đầu, chỉ cần làm theo 3 bước đơn giản sau:</span>
+                <span class="en">No physical camera is required upfront—just follow these 3 quick steps:</span>
+              </p>
+              <ul>
+                <li>
+                  <span class="vi"><strong>Bước 1:</strong> Nhấp đúp chuột vào tệp <code>2_Chay_He_Thong.bat</code> trong thư mục dự án hoặc chạy dòng lệnh bên dưới.</span>
+                  <span class="en"><strong>Step 1:</strong> Double-click <code>2_Chay_He_Thong.bat</code> in the project folder or run the command below.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Bước 2:</strong> Mở trình duyệt vào địa chỉ <code>http://localhost:8000/app</code> hoặc bấm nút <strong>Màn hình giám sát</strong>.</span>
+                  <span class="en"><strong>Step 2:</strong> Open <code>http://localhost:8000/app</code> in your browser or click <strong>Live Console</strong>.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Bước 3:</strong> Bấm nút <strong>Chạy video bể mẫu</strong> ngay phía trên khung hình camera để xem phần mềm tự động đo lượng bọt, màu nước và độ trong sau mỗi 2 giây.</span>
+                  <span class="en"><strong>Step 3:</strong> Click <strong>Run Sample Video</strong> above the camera frame to watch live foam, water color, and clarity readings update every 2 seconds.</span>
+                </li>
+              </ul>
+              <div class="cmd-pill-box">.\.venv\Scripts\python.exe main.py --no-gui</div>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Màn hình giám sát gồm những mục nào và cách xem ra sao?</span>
+                <span class="en">What are the 5 tabs on the monitoring screen and how do I use them?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Mỗi khi bấm vào một mục trên thanh menu trên cùng, màn hình chỉ hiện đúng mục đó cho gọn:</span>
+                <span class="en">Clicking any item on the top menu displays only that screen to keep things clean:</span>
+              </p>
+              <ul>
+                <li>
+                  <span class="vi"><strong>Trực mặt bể:</strong> Xem video trực tiếp, bấm <em>Tô màu vùng bọt</em> để thấy phần mềm đánh dấu lớp bọt và rác nổi, xem thanh đo bọt và cột hướng dẫn xử lý bên phải.</span>
+                  <span class="en"><strong>Live Basin:</strong> Watch live video, switch to <em>Foam Highlight</em> to see tinted foam and boxed trash, check the foam bar, and read action tips on the right.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Bể Hóa lý &amp; Bể Sinh học:</strong> Xem chi tiết từng chỉ số của từng bể và nhập tốc độ máy khuấy, lượng oxy hoặc độ pH của nước.</span>
+                  <span class="en"><strong>Physicochemical &amp; Biological:</strong> Check detailed cards for each basin and enter mixer speed, oxygen, or pH readings.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Kiểm tra ảnh &amp; video / Nhật ký cảnh báo:</strong> Tải bất kỳ ảnh hoặc video mặt bể từ máy tính lên để kiểm tra ngay, hoặc xem lại lịch sử các lần báo động kèm ảnh chụp.</span>
+                  <span class="en"><strong>File Analyzer &amp; Alert Logbook:</strong> Upload any saved basin photo or video for instant analysis, or review past alert snapshots.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Làm thế nào để kết nối Camera USB hoặc Camera mạng trong nhà máy?</span>
+                <span class="en">How do I connect a USB camera or plant network IP camera?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Tại màn hình <strong>Trực mặt bể</strong>, bạn bấm vào nút <strong>Chọn nguồn camera</strong> ở góc trên khung video:</span>
+                <span class="en">On the <strong>Live Basin</strong> screen, click <strong>Video Source</strong> above the video frame:</span>
+              </p>
+              <ul>
+                <li>
+                  <span class="vi"><strong>Với Camera cắm dây USB:</strong> Chọn loại nguồn là <em>Camera cắm cổng USB</em>, bấm nút quét tìm thiết bị rồi bấm <strong>Kết nối nguồn này</strong>.</span>
+                  <span class="en"><strong>For USB Cameras:</strong> Choose <em>USB Camera</em>, click Scan to find the device, then click <strong>Connect</strong>.</span>
+                </li>
+                <li>
+                  <span class="vi"><strong>Với Camera mạng nhà máy:</strong> Chọn <em>Camera mạng nhà máy</em> rồi bấm nút quét mạng nội bộ để phần mềm tự tìm các camera Hikvision, Dahua, Imou, EZVIZ đang lắp tại bể.</span>
+                  <span class="en"><strong>For Plant IP Cameras:</strong> Choose <em>Plant IP Camera</em> and click Scan LAN to automatically discover Hikvision, Dahua, Imou, or EZVIZ cameras.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Làm sao để nhận tin nhắn kèm ảnh cảnh báo qua điện thoại?</span>
+                <span class="en">How can I receive alert messages with basin photos on my phone?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Bạn mở mục <strong>Cài đặt</strong> ở góc phải trên cùng của màn hình giám sát, bật công tắc nhận cảnh báo qua <strong>Telegram</strong>, dán mã Bot của bạn vào rồi bấm nút tự động lấy mã phòng chat. Mỗi khi lượng bọt hoặc chất lượng nước vượt ngưỡng, hệ thống sẽ tự gửi ảnh chụp mặt bể về điện thoại.</span>
+                <span class="en">Open <strong>Settings</strong> in the top-right corner of the console, turn on <strong>Telegram</strong> notifications, paste your Bot token, and click auto-detect chat ID. Whenever foam or water quality breaches thresholds, a basin snapshot is sent to your phone.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Khi nào hệ thống báo mức Chú ý 25% và Báo động 40% về lượng bọt?</span>
+                <span class="en">When does the system trigger the 25% Warning and 40% Alarm for surface foam?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Phần mềm tự động nhận diện vùng bọt trắng nổi trên mặt bể rồi tính xem lớp bọt chiếm bao nhiêu phần trăm diện tích mặt nước. Khi bọt phủ trên <strong>25%</strong> mặt bể, hệ thống nhắc chú ý theo dõi; khi vượt quá <strong>40%</strong> sẽ phát cảnh báo đỏ để người trực xử lý ngay.</span>
+                <span class="en">The software detects white floating foam and calculates how much of the water surface it covers. Above <strong>25%</strong> triggers a warning; above <strong>40%</strong> triggers an alarm for immediate operator action.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Trời nắng gắt hoặc râm mát có làm phần mềm nhìn sai màu nước không?</span>
+                <span class="en">Does bright sunlight or cloudy weather confuse the water color check?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Không bị ảnh hưởng. Trước khi đọc màu nước, phần mềm tự động cân bằng lại độ sáng để loại bỏ ánh nắng chói hoặc bóng râm, nhờ đó phân biệt chính xác nước xanh trong, vàng đục hay nâu bùn vào bất kỳ thời điểm nào trong ngày.</span>
+                <span class="en">No. Before reading water color, the software automatically balances brightness to remove glare or shadows, accurately distinguishing clear green, murky yellow, or muddy brown water all day.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Tại sao nên nhập thêm tốc độ máy khuấy, lượng oxy và độ pH của bể?</span>
+                <span class="en">Why enter mixer speed, water oxygen, and pH levels into the screen?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Vì kết hợp hình ảnh camera với số đo tại bể sẽ tìm ra đúng nguyên nhân sự cố. Ví dụ: thấy mặt bể ít bọt khí mà lượng oxy trong nước cũng thấp thì phần mềm biết ngay máy sục khí đang yếu có thể làm chết vi sinh; ngược lại bọt quá dày mà oxy cao thì nhắc bạn giảm máy sục khí để tiết kiệm điện.</span>
+                <span class="en">Combining camera visuals with basin readings pinpoints the true cause. Few surface bubbles plus low oxygen warns that weak aeration may suffocate microbes, while thick foam plus high oxygen suggests lowering blower speed to save electricity.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="momo-acc-item">
+            <button type="button" class="momo-acc-trigger">
+              <span>
+                <span class="vi">Tôi có thể tải ảnh hoặc video quay sẵn lên để kiểm tra thử không?</span>
+                <span class="en">Can I upload my own saved basin photos or videos to test the system?</span>
+              </span>
+              <svg class="momo-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="momo-acc-panel">
+              <p>
+                <span class="vi">Hoàn toàn được. Bạn chỉ cần vào mục <strong>Kiểm tra ảnh &amp; video</strong> trên màn hình giám sát, chọn bất kỳ tấm ảnh hoặc đoạn video mặt bể nào trong máy tính rồi bấm <strong>Phân tích tệp này</strong> để xem ngay tỷ lệ bọt, màu nước, độ trong và số lượng rác nổi.</span>
+                <span class="en">Yes! Go to the <strong>File Analyzer</strong> tab on the monitoring screen, pick any saved basin photo or video from your computer, and click <strong>Analyze This File</strong> for instant foam, color, clarity, and trash results.</span>
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span class="vi">© 2026 Iris Water · Hệ thống Giám sát Vận hành Xử lý Nước thải</span>
+      <span class="en">© 2026 Iris Water · Smart Wastewater Treatment Monitoring System</span>
+    </div>
+  </footer>
+
+  <!-- Thanh mờ cố định dưới đáy trang chuẩn mẫu MoMo Talent -->
+  <div class="sticky-bottom-cta-bar" role="region" aria-label="Quick Launch">
+    <a href="/app" class="btn-try-it-now">
+      <span class="vi">TRY IT NOW</span>
+      <span class="en">TRY IT NOW</span>
+    </a>
+  </div>
+
+  <script>
+    (function () {
+      var savedLang = "vi";
+      try { savedLang = localStorage.getItem("iris_lang") || "vi"; } catch (_) {}
+      document.documentElement.setAttribute("data-lang", savedLang);
+
+      var langBtn = document.getElementById("btn-home-lang");
+      if (langBtn) {
+        langBtn.addEventListener("click", function () {
+          var cur = document.documentElement.getAttribute("data-lang") === "en" ? "vi" : "en";
+          document.documentElement.setAttribute("data-lang", cur);
+          try { localStorage.setItem("iris_lang", cur); } catch (_) {}
+        });
+      }
+
+      // Interactive "Pick Your Stage" tabs
+      document.querySelectorAll("[data-sc-tab]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var target = btn.getAttribute("data-sc-tab");
+          document.querySelectorAll("[data-sc-tab]").forEach(function (b) { b.classList.toggle("active", b === btn); });
+          document.querySelectorAll(".sc-panel").forEach(function (p) { p.classList.toggle("active", p.id === "sc-" + target); });
+        });
+      });
+
+      // Scroll-spy for topbar links & reveal animations
+      var spyLinks = document.querySelectorAll("[data-scroll-spy]");
+      spyLinks.forEach(function (link) {
+        link.addEventListener("click", function () {
+          spyLinks.forEach(function (l) { l.classList.toggle("active", l === link); });
+        });
+      });
+
+      // MoMo Talent style Accordion toggle
+      document.querySelectorAll(".momo-acc-trigger").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var item = btn.closest(".momo-acc-item");
+          if (item) {
+            item.classList.toggle("open");
+          }
+        });
+      });
+
+      if ("IntersectionObserver" in window) {
+        var revealObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+            }
+          });
+        }, { threshold: 0.12 });
+
+        document.querySelectorAll(".reveal-section").forEach(function (sec) {
+          revealObserver.observe(sec);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
