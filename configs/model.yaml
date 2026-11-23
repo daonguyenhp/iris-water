@@ -1,0 +1,21 @@
+# Iris WWTP — model registry (foam first; color / debris later)
+
+task: wwtp_surface
+primary: foam_coverage
+
+foam:
+  config: configs/foam.yaml
+  backend: yolo
+  weights_path: models/foam/best.pt
+
+# Reserved for next MVP stages
+water_color:
+  enabled: false
+  weights_path: models/foam/water_color.onnx
+
+foreign_object:
+  enabled: false
+  weights_path: models/foam/debris_yolo.onnx
+
+# Fall/stroke pose stack removed from WWTP product path.
+# Old ONNX under models/pose and models/checkpoints may be deleted.

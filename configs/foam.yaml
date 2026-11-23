@@ -1,0 +1,58 @@
+# Iris Water — Wastewater Surface Analysis Configuration
+
+roi:
+  box: null
+
+thresholds:
+  warn_pct: 25.0
+  alarm_pct: 40.0
+  cooldown_sec: 60
+
+model:
+  backend: yolo
+  weights_path: models/foam/best.pt
+  class_names: [foam]
+  conf: 0.35
+  imgsz: 640
+  device: ""
+
+hsv:
+  h_min: 0
+  h_max: 180
+  s_min: 0
+  s_max: 80
+  v_min: 160
+  v_max: 255
+
+preprocess:
+  blur_ksize: 5
+
+morphology:
+  open_ksize: 3
+  close_ksize: 7
+  min_area_px: 80
+
+output:
+  save_overlay: true
+  overlay_dir: data/foam/overlays
+
+camera_loop:
+  interval_sec: 2.0
+
+water_analysis:
+  illumination_compensation: true
+  clarity_clear_threshold: 55.0
+  clarity_moderate_threshold: 25.0
+
+sludge_analysis:
+  mature_h_min: 10
+  mature_h_max: 28
+  mature_s_min: 45
+  mature_v_min: 45
+
+debris_detection:
+  min_area_px: 180
+  max_area_ratio: 0.18
+  contrast_threshold: 42.0
+  warn_count: 1
+  alarm_count: 3
