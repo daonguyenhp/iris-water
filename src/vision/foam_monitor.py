@@ -24,6 +24,7 @@ class FoamMonitor:
         self._last: Optional[Dict[str, Any]] = None
         self._session_max = 0.0
         self._last_event_ts = 0.0
+        self._last_latency_ms = 0.0
         self._get_frame: Optional[Callable[[], Optional[np.ndarray]]] = None
         # Callback every sample: (payload, frame_bgr, create_event: bool)
         self._persist_cb: Optional[
@@ -79,20 +80,52 @@ class FoamMonitor:
     def _loop(self) -> None:
         while not self._stop.is_set():
             cfg = load_config("foam.yaml")
-            interval = float(cfg.get("camera_loop", {}).get("interval_sec", 2.0))
-            interval = max(0.8, min(interval, 30.0))
+            loop_cfg = cfg.get("camera_loop", {})
+            base_interval = float(loop_cfg.get("interval_sec", 0.25))
+            base_interval = max(0.15, min(base_interval, 30.0))
+            adaptive = bool(loop_cfg.get("adaptive", True))
+            duty_factor = float(loop_cfg.get("duty_factor", 3.0))
             cooldown = float(cfg.get("thresholds", {}).get("cooldown_sec", 60))
 
             with self._lock:
                 active = self.enabled
+                last_ms = self._last_latency_ms
             if active and self._get_frame is not None:
                 frame = self._get_frame()
                 if frame is not None:
                     self._analyze(frame, cfg, cooldown)
-            self._stop.wait(interval)
+                    with self._lock:
+                        last_ms = self._last_latency_ms
+
+            wait_sec = base_interval
+            if adaptive and last_ms > 0:
+                wait_sec = max(base_interval, min(5.0, (last_ms / 1000.0) * duty_factor))
+            self._stop.wait(wait_sec)
 
     def _analyze(self, frame: np.ndarray, cfg: Dict[str, Any], cooldown: float) -> None:
-        result = estimate_foam_coverage(frame, cfg, draw_overlay=True)
+        from src.vision.live_mask_tracker import live_water_foam_overlay, resolve_roi_box_from_norm
+
+        fh, fw = frame.shape[:2]
+        roi_box = resolve_roi_box_from_norm(live_water_foam_overlay.get_roi_norm(), fw, fh)
+        if roi_box is None:
+            with self._lock:
+                self._last = {
+                    "ok": False,
+                    "roi_required": True,
+                    "coverage_pct": None,
+                    "level": "waiting",
+                    "error": None,
+                    "ts": time.time(),
+                }
+            return
+
+        result = estimate_foam_coverage(
+            frame,
+            cfg,
+            draw_overlay=True,
+            roi_box_override=roi_box,
+            foam_only=True,
+        )
         overlay_path = None
         if result.overlay_bgr is not None and result.error is None:
             out_dir = get_project_root() / "data" / "foam" / "overlays"
@@ -111,6 +144,7 @@ class FoamMonitor:
         create_event = False
         with self._lock:
             self._last = payload
+            self._last_latency_ms = float(result.latency_ms)
             if result.error is None and result.coverage_pct > self._session_max:
                 self._session_max = float(result.coverage_pct)
             create_event = (

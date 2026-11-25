@@ -88,6 +88,55 @@ _yolo_model = None
 _yolo_weights_loaded: Optional[str] = None
 
 
+def _foam_mask_water_foam(
+    roi_bgr: np.ndarray,
+    cfg: Dict[str, Any],
+    *,
+    foam_only: bool = False,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Run unified bundle on ROI. If foam_only=True, skip SegFormer and treat ROI as water_mask."""
+    from src.utils.config import resolve_model_path
+    from src.vision.water_foam_model import get_water_foam_predictor
+
+    model_cfg = cfg.get("model", {})
+    bundle_rel = model_cfg.get("bundle_path", "models/water_foam/water_foam_bundle.pth")
+    bundle_path = resolve_model_path(bundle_rel)
+    if bundle_path is None or not Path(bundle_path).exists():
+        raise FileNotFoundError(
+            f"Unified water+foam bundle missing: {bundle_rel}. "
+            "Place water_foam_bundle.pth under models/water_foam/."
+        )
+
+    img_size = int(model_cfg.get("img_size", 256))
+    water_thresh = float(model_cfg.get("water_thresh", 0.5))
+    foam_thresh = float(model_cfg.get("foam_thresh", 0.5))
+    device = model_cfg.get("device") or None
+
+    predictor = get_water_foam_predictor(
+        bundle_path=bundle_path,
+        device=device,
+        img_size=img_size,
+    )
+    if foam_only:
+        h, w = roi_bgr.shape[:2]
+        water_mask = np.full((h, w), 255, dtype=np.uint8)
+        foam_mask = predictor.predict_foam_in_mask(
+            roi_bgr,
+            water_mask,
+            foam_thresh=foam_thresh,
+            img_size=img_size,
+        )
+        return foam_mask, water_mask
+
+    water_mask, foam_mask = predictor.predict(
+        roi_bgr,
+        water_thresh=water_thresh,
+        foam_thresh=foam_thresh,
+        img_size=img_size,
+    )
+    return foam_mask, water_mask
+
+
 def _foam_mask_yolo(
     roi_bgr: np.ndarray, cfg: Dict[str, Any]
 ) -> Tuple[np.ndarray, list[Tuple[int, int, int, int, float]]]:
@@ -211,8 +260,9 @@ def _draw_overlay(
     det_boxes: Optional[Sequence[Tuple[int, int, int, int, float]]] = None,
     debris_items: Optional[Sequence[Dict[str, Any]]] = None,
     roi_is_full_frame: bool = False,
+    water_mask: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """Overlay highlights foam *mask* (and YOLO boxes / debris boxes), not the whole basin ROI."""
+    """Overlay highlights water mask (blue) + foam mask (level color) inside ROI."""
     out = frame.copy()
     x1, y1, x2, y2 = roi_box
     # OpenCV BGR: green / yellow-ish / red-ish
@@ -223,10 +273,18 @@ def _draw_overlay(
     }.get(level, (180, 180, 180))
 
     overlay = out[y1:y2, x1:x2].copy()
-    tint = np.zeros_like(overlay)
+    tint = overlay.copy()
+    if water_mask is not None:
+        tint[water_mask > 0] = (225, 145, 20)
     tint[mask > 0] = bgr
-    blended = cv2.addWeighted(overlay, 0.55, tint, 0.45, 0)
+    blended = cv2.addWeighted(overlay, 0.58, tint, 0.42, 0)
     out[y1:y2, x1:x2] = blended
+
+    if water_mask is not None:
+        w_contours, _ = cv2.findContours(water_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if w_contours:
+            w_shifted = [c + np.array([[x1, y1]]) for c in w_contours]
+            cv2.drawContours(out, w_shifted, -1, (255, 180, 0), 2)
 
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if contours:
@@ -303,6 +361,8 @@ def estimate_foam_coverage(
     cfg: Optional[Dict[str, Any]] = None,
     *,
     draw_overlay: bool = True,
+    roi_box_override: Optional[Sequence[int]] = None,
+    foam_only: bool = False,
 ) -> FoamCoverageResult:
     """Estimate foam coverage percentage inside configured ROI."""
     t0 = time.perf_counter()
@@ -322,23 +382,31 @@ def estimate_foam_coverage(
             if frame is None or not hasattr(frame, "shape"):
                 raise ValueError("image ndarray is empty")
 
-        backend = str(foam_cfg.get("model", {}).get("backend", "yolo")).lower()
-        roi_cfg = foam_cfg.get("roi", {}).get("box")
+        backend = str(foam_cfg.get("model", {}).get("backend", "water_foam")).lower()
+        roi_cfg = roi_box_override if roi_box_override is not None else foam_cfg.get("roi", {}).get("box")
         roi, roi_box = _resolve_roi(frame, roi_cfg)
         fh, fw = frame.shape[:2]
         roi_is_full_frame = roi_box == (0, 0, fw, fh)
         det_boxes: list[Tuple[int, int, int, int, float]] = []
-        if backend in ("yolo", "yolo_seg", "ultralytics"):
+        water_mask: Optional[np.ndarray] = None
+        if backend in ("water_foam", "two_stage", "unified"):
+            mask, water_mask = _foam_mask_water_foam(roi, foam_cfg, foam_only=foam_only)
+        elif backend in ("yolo", "yolo_seg", "ultralytics"):
             mask, det_boxes = _foam_mask_yolo(roi, foam_cfg)
         elif backend == "classical":
             mask = _foam_mask_classical(roi, foam_cfg)
         else:
             raise NotImplementedError(f"Unknown foam backend: {backend!r}")
         foam_px = int(cv2.countNonZero(mask))
-        roi_px = int(roi.shape[0] * roi.shape[1])
-        if roi_px <= 0:
-            raise ValueError("ROI has zero area")
-        coverage = 100.0 * foam_px / roi_px
+        if water_mask is not None:
+            water_px = int(cv2.countNonZero(water_mask))
+            roi_px = water_px if water_px > 0 else int(roi.shape[0] * roi.shape[1])
+            coverage = (100.0 * foam_px / water_px) if water_px > 0 else 0.0
+        else:
+            roi_px = int(roi.shape[0] * roi.shape[1])
+            if roi_px <= 0:
+                raise ValueError("ROI has zero area")
+            coverage = 100.0 * foam_px / roi_px
         level = _level_for(
             coverage,
             float(thr.get("warn_pct", 25.0)),
@@ -353,6 +421,7 @@ def estimate_foam_coverage(
             coverage_pct=round(coverage, 2),
             foam_level=level,
             cfg=foam_cfg,
+            water_mask=water_mask,
         )
         debris_items = (surface_analysis.get("debris") or {}).get("items") or []
         latency_ms = (time.perf_counter() - t0) * 1000.0
@@ -366,6 +435,7 @@ def estimate_foam_coverage(
                 det_boxes=det_boxes,
                 debris_items=debris_items,
                 roi_is_full_frame=roi_is_full_frame,
+                water_mask=water_mask,
             )
             if draw_overlay
             else None

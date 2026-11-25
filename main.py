@@ -213,6 +213,7 @@ def main() -> None:
     parser.add_argument("--api-port", type=int, default=8000, help="Port cho FastAPI server")
     parser.add_argument("--fast", action="store_true", default=False, help="Chế độ siêu nhanh Nano yolov8n-pose @ 480px")
     parser.add_argument("--sequential", action="store_true", help="Chạy chế độ tuần tự đơn luồng cũ thay vì Decoupled 60 FPS")
+    parser.add_argument("--connect-camera", action="store_true", default=False, help="Tự động kết nối camera ngay khi khởi động (mặc định TẮT: chỉ bật web, kết nối camera khi được chỉ định)")
     args = parser.parse_args()
 
     print_banner()
@@ -226,6 +227,45 @@ def main() -> None:
     # BƯỚC 3: Khởi động Web Server (tùy chọn)
     if not args.no_server:
         start_background_web_server(port=args.api_port)
+
+    connect_camera_on_start = args.connect_camera or (args.gui and not args.no_gui)
+
+    if not connect_camera_on_start:
+        if args.no_server:
+            print("[Info] Đang chạy với --no-server và không --connect-camera. Không có tác vụ nào để chạy.")
+            return
+        try:
+            import src.api.server as srv
+            with srv.state_lock:
+                srv.external_ingestion_loop = False
+                srv.is_running = False
+                srv.camera_stream = None
+        except Exception as e:
+            print(f"[Warning] Không thể cấu hình trạng thái web server: {e}")
+
+        print("\n[3/3] Web Dashboard đã sẵn sàng (CHẾ ĐỘ CHỈ BẬT WEB — CHƯA KẾT NỐI CAMERA).")
+        print(f"      Truy cập giao diện web tại: http://localhost:{args.api_port}")
+        print("      Camera chỉ được kết nối khi bạn thao tác chọn/bật camera trên Web UI.")
+        print("      Nhấn [Ctrl+C] trong terminal để dừng.")
+        print("-" * 80)
+        try:
+            while True:
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            print("\n[Info] Nhận tín hiệu KeyboardInterrupt (Ctrl+C). Đang tắt hệ thống...")
+            try:
+                import src.api.server as srv
+                if srv.multi_camera_monitor is not None:
+                    srv.multi_camera_monitor.stop_all()
+                with srv.state_lock:
+                    if srv.camera_stream:
+                        srv.camera_stream.release()
+                        srv.camera_stream = None
+                    srv.is_running = False
+            except Exception:
+                pass
+            print("[Success] Hệ thống đã dừng thành công. Tạm biệt!\n")
+        return
 
     # BƯỚC 4: Khởi tạo Pipeline AI (Decoupled High-FPS hoặc Tuần tự)
     decoupled_pipe = None

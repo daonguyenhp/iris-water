@@ -9,12 +9,16 @@ thresholds:
   cooldown_sec: 60
 
 model:
-  backend: yolo
+  backend: water_foam
+  bundle_path: models/water_foam/water_foam_bundle.pth
+  img_size: 256
+  water_thresh: 0.5
+  foam_thresh: 0.5
   weights_path: models/foam/best.pt
   class_names: [foam]
   conf: 0.35
   imgsz: 640
-  device: ""
+  device: "cpu"
 
 hsv:
   h_min: 0
@@ -37,7 +41,17 @@ output:
   overlay_dir: data/foam/overlays
 
 camera_loop:
-  interval_sec: 2.0
+  interval_sec: 0.5    # ~2 FPS live sampling trên CPU (model ~8.4 FPS / ~119ms -> ~25% CPU duty)
+  adaptive: true       # Tự giãn khoảng lấy mẫu nếu CPU bận / latency tăng
+  duty_factor: 3.0     # Khoảng nghỉ tối thiểu >= 3x thời gian suy luận thực tế
+
+video_sampling:
+  target_fps: 2.0      # Lấy ~2 frame/giây trên CPU (30 frame * ~135ms ≈ 4s cho cả video)
+  max_frames: 30       # Chia đều bước nhảy trên toàn bộ video thay vì chỉ lấy đoạn đầu
+
+live_overlay:
+  stride_frames: 15    # Chạy AI keyframe mỗi 15 frame (~2 FPS trên video 30 FPS)
+  max_shift_px: 18.0   # Giới hạn dịch nhẹ mask tối đa ±18px giữa 2 keyframe
 
 water_analysis:
   illumination_compensation: true

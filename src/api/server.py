@@ -429,6 +429,7 @@ def system_status() -> Dict[str, Any]:
         "camera": cam_info,
         "vision_frame_ready": has_frame,
         "foam": foam_snap,
+        "water_roi": _current_water_roi(),
         "modules": {
             "foam_coverage": {"status": "live", "label": "Độ phủ bọt & kết cấu bùn"},
             "water_color": {"status": "live", "label": "Sắc tố màu & độ trong / phản xạ nước"},
@@ -483,6 +484,8 @@ def switch_camera(req: CameraSwitchRequest) -> Dict[str, Any]:
         req.rtsp_username = req.rtsp_password = None  # now inside the URL; never echoed back separately
     elif req.source_type == "video":
         if not req.video_path or not req.video_path.strip():
+            req.video_path = str(load_camera_config().get("video", {}).get("path") or "").strip()
+        if not req.video_path or not req.video_path.strip():
             raise HTTPException(
                 status_code=400,
                 detail="Chọn tệp video trong data/videos/ (hoặc nhập đường dẫn MP4).",
@@ -524,7 +527,7 @@ def switch_camera(req: CameraSwitchRequest) -> Dict[str, Any]:
                 new_stream = RTSPStream.from_config(req.rtsp_url)
                 friendly_name = f"IP Camera ({mask_url(req.rtsp_url)})"
             elif req.source_type == "video":
-                new_stream = VideoFileStream(video_path=req.video_path, loop=True)
+                new_stream = VideoFileStream(video_path=req.video_path, loop=True, simulate_realtime=True)
                 friendly_name = f"Video ({Path(req.video_path).name})"
             else:
                 raise HTTPException(status_code=400, detail=f"Loại nguồn không hỗ trợ: {req.source_type}")
@@ -556,20 +559,12 @@ def switch_camera(req: CameraSwitchRequest) -> Dict[str, Any]:
             if req.save_as_default:
                 save_camera_config_to_yaml(req.dict())
 
-            # Ensure pipeline is initialized
-            if pipeline_instance is None:
-                try:
-                    from src.pipeline.decoupled_pipeline import DecoupledPipeline
-                    pipeline_instance = DecoupledPipeline(model_name="yolov8n-pose.pt", img_size=480)
-                    pipeline_instance.start()
-                except Exception:
-                    pipeline_instance = RealtimePipeline()
-                # Wire the alarm WebSocket broadcast so alerts from this
-                # freshly created pipeline still reach the frontend chime.
-                pipeline_instance.alert_manager.dispatcher.subscribe_websocket(broadcast_alert_event)
-            elif hasattr(pipeline_instance, "start") and not getattr(pipeline_instance, "_running", True):
-                # Resuming after /camera/stop, which stopped the AI worker thread
-                pipeline_instance.start()
+            # Reset live water+foam mask overlay state for the new camera/video source
+            try:
+                from src.vision.live_mask_tracker import live_water_foam_overlay
+                live_water_foam_overlay.reset()
+            except Exception:
+                pass
 
             # Ensure background worker is running (the desktop app runs its own ingestion loop)
             if not is_running:
@@ -774,6 +769,7 @@ def shutdown_system() -> Dict[str, Any]:
 def _pipeline_worker_loop() -> None:
     """Continuous processing loop running on a dedicated thread."""
     global latest_annotated_frame, is_running
+    from src.vision.live_mask_tracker import live_water_foam_overlay
 
     while is_running and camera_stream and camera_stream.is_opened():
         packet = camera_stream.read(timeout=0.5)
@@ -781,13 +777,7 @@ def _pipeline_worker_loop() -> None:
             time.sleep(0.005)
             continue
 
-        if hasattr(pipeline_instance, "submit_frame"):
-            pipeline_instance.submit_frame(packet)
-            annotated_frame, _ = pipeline_instance.render_frame(packet.frame, packet.timestamp)
-        else:
-            result = pipeline_instance.process_frame(packet.frame, packet.timestamp)
-            annotated_frame = result.annotated_frame
-
+        annotated_frame = live_water_foam_overlay.process_frame(packet.frame)
         publish_vision_frame(packet.frame)
         publish_annotated_frame(annotated_frame)
 
@@ -846,6 +836,30 @@ def _with_clip_status(evt: Dict[str, Any]) -> Dict[str, Any]:
 def list_events(limit: int = 50) -> List[Dict[str, Any]]:
     """Fetch recent historical emergency alerts (clip_available: the fall clip can be played)."""
     return [_with_clip_status(e) for e in event_logger.get_recent_events(limit=limit)]
+
+
+def _current_water_roi() -> Optional[List[float]]:
+    from src.vision.live_mask_tracker import live_water_foam_overlay
+    roi = live_water_foam_overlay.get_roi_norm()
+    return list(roi) if roi is not None else None
+
+
+@app.get("/api/vision/roi")
+def get_vision_roi() -> Dict[str, Any]:
+    """Return current normalized water ROI [nx1, ny1, nx2, ny2] or null."""
+    return {"ok": True, "roi": _current_water_roi()}
+
+
+class VisionRoiRequest(BaseModel):
+    roi: Optional[List[float]] = None
+
+
+@app.post("/api/vision/roi")
+def set_vision_roi(req: VisionRoiRequest) -> Dict[str, Any]:
+    """Set or clear the user-drawn water ROI rectangle for live video/camera streaming."""
+    from src.vision.live_mask_tracker import live_water_foam_overlay
+    saved = live_water_foam_overlay.set_roi_norm(req.roi)
+    return {"ok": True, "roi": list(saved) if saved is not None else None}
 
 
 @app.post("/api/vision/foam/image")
@@ -925,8 +939,8 @@ async def analyze_foam_image(
 @app.post("/api/vision/foam/video")
 async def analyze_foam_video(
     file: UploadFile = File(...),
-    every_n_frames: int = Form(15),
-    max_frames: int = Form(40),
+    every_n_frames: int = Form(0),
+    max_frames: int = Form(0),
     log_event: bool = Form(False),
 ) -> Dict[str, Any]:
     """Upload a short MP4/WebM clip and run foam coverage on sampled frames."""
@@ -934,8 +948,8 @@ async def analyze_foam_video(
     if suffix not in {".mp4", ".avi", ".mov", ".mkv", ".webm"}:
         raise HTTPException(status_code=400, detail="Chỉ hỗ trợ video: mp4, avi, mov, mkv, webm")
 
-    every_n_frames = max(1, min(int(every_n_frames), 120))
-    max_frames = max(1, min(int(max_frames), 120))
+    every_n_opt = max(1, min(int(every_n_frames), 120)) if int(every_n_frames) > 0 else None
+    max_frames_opt = max(1, min(int(max_frames), 120)) if int(max_frames) > 0 else None
 
     tmp_dir = Path(tempfile.mkdtemp(prefix="iris_foam_"))
     tmp_path = tmp_dir / f"upload_{uuid.uuid4().hex}{suffix}"
@@ -947,8 +961,8 @@ async def analyze_foam_video(
 
         result = process_foam_video(
             tmp_path,
-            every_n_frames=every_n_frames,
-            max_frames=max_frames,
+            every_n_frames=every_n_opt,
+            max_frames=max_frames_opt,
             save_overlays=True,
         )
 
@@ -1131,12 +1145,6 @@ def mjpeg_generator():
 @app.get("/stream/mjpeg")
 def video_mjpeg_feed():
     """MJPEG Live Video Stream for HTML <img> embedding."""
-    global is_running
-    if not is_running:
-        try:
-            start_camera(CameraStartRequest())
-        except Exception as e:
-            print(f"[Warning] Auto-start camera in /stream/mjpeg failed: {e}")
     return StreamingResponse(mjpeg_generator(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 

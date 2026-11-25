@@ -401,11 +401,14 @@ def analyze_basin_surface(
     coverage_pct: float,
     foam_level: str,
     cfg: Optional[Dict[str, Any]] = None,
+    water_mask: Optional[np.ndarray] = None,
 ) -> Dict[str, Any]:
     """Run complete physicochemical + biological surface analysis in ~5-15ms on ROI."""
     x1, y1, x2, y2 = roi_box
     roi_bgr = frame[y1:y2, x1:x2]
     non_foam_mask = cv2.bitwise_not(foam_mask)
+    if water_mask is not None:
+        non_foam_mask = cv2.bitwise_and(water_mask, non_foam_mask)
 
     water_info = analyze_water_color_and_clarity(roi_bgr, non_foam_mask, cfg)
     sludge_info = analyze_sludge_and_bubbles(roi_bgr, foam_mask, coverage_pct)

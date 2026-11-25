@@ -797,15 +797,25 @@
       return;
     }
 
-    if (!last) {
+    if (!last || last.roi_required) {
       if (elKpiFoam) elKpiFoam.textContent = "—";
-      if (elKpiFoamLevel) elKpiFoamLevel.textContent = foam.enabled ? "Đang chờ hình…" : "Đã tắt";
-      if (elStateBanner) elStateBanner.textContent = foam.enabled ? "Đang chờ hình…" : "Đã tắt";
+      const waitMsg = last && last.roi_required ? "Chờ chọn vùng nước" : (foam.enabled ? "Đang chờ hình…" : "Đã tắt");
+      if (elKpiFoamLevel) elKpiFoamLevel.textContent = waitMsg;
+      if (elStateBanner) elStateBanner.textContent = waitMsg;
       applyFoamMetricTone("normal");
       if (elStatus) {
-        elStatus.textContent = foam.enabled
-          ? "Đang chờ hình từ camera. Hãy bật camera hoặc chọn video mẫu."
-          : "Theo dõi mặt bể đang tắt.";
+        elStatus.textContent = last && last.roi_required
+          ? "Chưa chọn vùng mặt nước — Hãy vẽ 1 ô chữ nhật trên video."
+          : (foam.enabled
+            ? "Đang chờ hình từ camera. Hãy bật camera hoặc chọn video mẫu."
+            : "Theo dõi mặt bể đang tắt.");
+      }
+      if (last && last.roi_required) {
+        const elSegHint = document.getElementById("seg-empty-hint");
+        if (elSegHint) {
+          elSegHint.style.display = "flex";
+          elSegHint.innerHTML = '<span class="vi">Chưa chọn vùng nước — Kéo chuột vẽ ô chữ nhật ở khung hình</span><span class="en">No water region — Draw a rectangle on the video frame</span>';
+        }
       }
       return;
     }
@@ -1173,6 +1183,9 @@
       } else {
         if (elBtnCamToggleTxt) elBtnCamToggleTxt.textContent = "Bật luồng";
         if (elOfflineOverlay) elOfflineOverlay.style.display = "flex";
+      }
+      if (typeof syncWaterRoiUi === "function") {
+        syncWaterRoiUi(data.water_roi || null, isCameraRunning);
       }
 
       // Update simulated or active persons in table
@@ -2923,6 +2936,147 @@
       });
     });
 
+    // Interactive Water ROI Rectangle Drawing (used as water_mask for foam-only video streaming)
+    const elRoiCanvas = document.getElementById("roi-draw-canvas");
+    const elRoiNotice = document.getElementById("roi-unselected-notice");
+    const elBtnClearRoi = document.getElementById("btn-clear-roi");
+    const elRoiTag = document.getElementById("roi-assumption-tag");
+    let currentWaterRoi = null; // [nx1, ny1, nx2, ny2] or null
+    let isDrawingRoi = false;
+    let roiStartPx = null;
+    let roiDragPx = null;
+
+    function getContainedVideoRect() {
+      if (!elRoiCanvas) return { x: 0, y: 0, w: 1, h: 1 };
+      const cw = elRoiCanvas.clientWidth || 1;
+      const ch = elRoiCanvas.clientHeight || 1;
+      const nw = (elVideoStream && elVideoStream.naturalWidth) ? elVideoStream.naturalWidth : 1280;
+      const nh = (elVideoStream && elVideoStream.naturalHeight) ? elVideoStream.naturalHeight : 720;
+      const scale = Math.min(cw / nw, ch / nh);
+      const w = nw * scale;
+      const h = nh * scale;
+      return { x: (cw - w) / 2, y: (ch - h) / 2, w, h };
+    }
+
+    function drawRoiCanvas() {
+      if (!elRoiCanvas) return;
+      const cw = elRoiCanvas.clientWidth || 0;
+      const ch = elRoiCanvas.clientHeight || 0;
+      if (cw <= 0 || ch <= 0) return;
+      if (elRoiCanvas.width !== cw || elRoiCanvas.height !== ch) {
+        elRoiCanvas.width = cw;
+        elRoiCanvas.height = ch;
+      }
+      const ctx = elRoiCanvas.getContext("2d");
+      ctx.clearRect(0, 0, cw, ch);
+
+      const box = getContainedVideoRect();
+      if (isDrawingRoi && roiStartPx && roiDragPx) {
+        const rx = Math.min(roiStartPx.x, roiDragPx.x);
+        const ry = Math.min(roiStartPx.y, roiDragPx.y);
+        const rw = Math.abs(roiDragPx.x - roiStartPx.x);
+        const rh = Math.abs(roiDragPx.y - roiStartPx.y);
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.strokeRect(rx, ry, rw, rh);
+        ctx.fillStyle = "rgba(56, 189, 248, 0.16)";
+        ctx.fillRect(rx, ry, rw, rh);
+      } else if (currentWaterRoi && currentWaterRoi.length === 4) {
+        const [nx1, ny1, nx2, ny2] = currentWaterRoi;
+        const rx = box.x + nx1 * box.w;
+        const ry = box.y + ny1 * box.h;
+        const rw = (nx2 - nx1) * box.w;
+        const rh = (ny2 - ny1) * box.h;
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+        ctx.strokeRect(rx, ry, rw, rh);
+      }
+    }
+
+    function syncWaterRoiUi(roiNorm, streamRunning) {
+      currentWaterRoi = Array.isArray(roiNorm) && roiNorm.length === 4 ? roiNorm : null;
+      if (elRoiNotice) {
+        elRoiNotice.style.display = streamRunning && !currentWaterRoi ? "block" : "none";
+      }
+      if (elBtnClearRoi) {
+        elBtnClearRoi.style.display = currentWaterRoi ? "inline-flex" : "none";
+      }
+      if (elRoiTag) {
+        elRoiTag.textContent = currentWaterRoi ? "Vùng nước đã chọn (Foam Only)" : "Chưa chọn vùng nước";
+      }
+      if (elRoiCanvas) {
+        elRoiCanvas.style.pointerEvents = streamRunning ? "auto" : "none";
+      }
+      drawRoiCanvas();
+    }
+
+    async function pushWaterRoiToServer(roiNorm) {
+      try {
+        const res = await apiFetch(`${API_BASE}/api/vision/roi`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roi: roiNorm }),
+        });
+        const data = await res.json();
+        syncWaterRoiUi(data.roi || null, true);
+        pollStatus();
+      } catch (err) {
+        console.error("Failed to save ROI:", err);
+      }
+    }
+
+    if (elRoiCanvas) {
+      elRoiCanvas.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        const rect = elRoiCanvas.getBoundingClientRect();
+        isDrawingRoi = true;
+        roiStartPx = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        roiDragPx = { ...roiStartPx };
+        elRoiCanvas.setPointerCapture(e.pointerId);
+        drawRoiCanvas();
+      });
+
+      elRoiCanvas.addEventListener("pointermove", (e) => {
+        if (!isDrawingRoi) return;
+        const rect = elRoiCanvas.getBoundingClientRect();
+        roiDragPx = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        drawRoiCanvas();
+      });
+
+      elRoiCanvas.addEventListener("pointerup", (e) => {
+        if (!isDrawingRoi) return;
+        isDrawingRoi = false;
+        const rect = elRoiCanvas.getBoundingClientRect();
+        roiDragPx = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const box = getContainedVideoRect();
+        const x1 = Math.max(0, Math.min(1, (Math.min(roiStartPx.x, roiDragPx.x) - box.x) / box.w));
+        const y1 = Math.max(0, Math.min(1, (Math.min(roiStartPx.y, roiDragPx.y) - box.y) / box.h));
+        const x2 = Math.max(0, Math.min(1, (Math.max(roiStartPx.x, roiDragPx.x) - box.x) / box.w));
+        const y2 = Math.max(0, Math.min(1, (Math.max(roiStartPx.y, roiDragPx.y) - box.y) / box.h));
+        if ((x2 - x1) >= 0.03 && (y2 - y1) >= 0.03) {
+          pushWaterRoiToServer([
+            Number(x1.toFixed(4)),
+            Number(y1.toFixed(4)),
+            Number(x2.toFixed(4)),
+            Number(y2.toFixed(4)),
+          ]);
+        } else {
+          drawRoiCanvas();
+        }
+      });
+
+      window.addEventListener("resize", drawRoiCanvas);
+    }
+
+    if (elBtnClearRoi) {
+      elBtnClearRoi.addEventListener("click", (e) => {
+        e.stopPropagation();
+        pushWaterRoiToServer(null);
+      });
+    }
+
     // Công tắc 3 chế độ xem hình mặt bể: Hình thực tế | Lớp đo bọt & rác | So sánh đôi
     const elViewportStage = document.getElementById("viewport-stage");
     document.querySelectorAll("[data-view-mode]").forEach((btn) => {
@@ -2932,6 +3086,7 @@
         if (elViewportStage) {
           elViewportStage.classList.remove("mode-live", "mode-mask", "mode-split");
           elViewportStage.classList.add(`mode-${mode}`);
+          setTimeout(drawRoiCanvas, 60);
         }
       });
     });
@@ -3047,6 +3202,107 @@
     function setBtnLabel(btn, viText, enText) {
       if (!btn) return;
       btn.innerHTML = `<span class="vi">${viText}</span><span class="en">${enText}</span>`;
+    }
+
+    // Tab Xử lý ảnh tĩnh (Still Image Segmentation)
+    const elStillInput = document.getElementById("still-file-input");
+    const elBtnStillRun = document.getElementById("btn-still-run");
+    const elStillLogEvent = document.getElementById("still-log-event");
+    const elStillFeedback = document.getElementById("still-feedback");
+    const elStillOrigImg = document.getElementById("still-orig-img");
+    const elStillOrigPh = document.getElementById("still-orig-placeholder");
+    const elStillResImg = document.getElementById("still-result-img");
+    const elStillResPh = document.getElementById("still-result-placeholder");
+
+    function showStillFeedback(msg, isError = false) {
+      if (!elStillFeedback) return;
+      elStillFeedback.style.display = "block";
+      elStillFeedback.className = `settings-feedback ${isError ? "feedback-error" : "feedback-success"}`;
+      elStillFeedback.textContent = msg;
+    }
+
+    if (elStillInput) {
+      elStillInput.addEventListener("change", () => {
+        const file = elStillInput.files && elStillInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if (elStillOrigImg && ev.target?.result) {
+            elStillOrigImg.src = ev.target.result;
+            elStillOrigImg.style.display = "block";
+            if (elStillOrigPh) elStillOrigPh.style.display = "none";
+          }
+          if (elStillResImg) {
+            elStillResImg.style.display = "none";
+            elStillResImg.removeAttribute("src");
+          }
+          if (elStillResPh) elStillResPh.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (elBtnStillRun && elStillInput) {
+      elBtnStillRun.addEventListener("click", async () => {
+        const file = elStillInput.files && elStillInput.files[0];
+        if (!file) {
+          showStillFeedback("Vui lòng chọn 1 tấm ảnh tĩnh trước khi phân tích.", true);
+          return;
+        }
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("log_event", elStillLogEvent && elStillLogEvent.checked ? "true" : "false");
+
+        elBtnStillRun.disabled = true;
+        setBtnLabel(elBtnStillRun, "Đang phân tích…", "Analyzing…");
+        showStillFeedback(`Đang phân tích ảnh "${file.name}" trên CPU…`, false);
+
+        try {
+          const res = await apiFetch(`${API_BASE}/api/vision/foam/image`, {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          if (!res.ok || data.error) {
+            showStillFeedback(data.detail || data.error || "Không phân tích được ảnh này.", true);
+            return;
+          }
+
+          if (elStillResImg && data.preview_data_url) {
+            elStillResImg.src = data.preview_data_url;
+            elStillResImg.style.display = "block";
+            if (elStillResPh) elStillResPh.style.display = "none";
+          }
+
+          const elCov = document.getElementById("still-val-coverage");
+          const elLvl = document.getElementById("still-val-level");
+          const elPx = document.getElementById("still-val-pixels");
+          const elLat = document.getElementById("still-val-latency");
+          const elWat = document.getElementById("still-val-water");
+          const elCla = document.getElementById("still-val-clarity");
+          const elDeb = document.getElementById("still-val-debris");
+          const elScn = document.getElementById("still-val-scenario");
+
+          if (elCov) elCov.textContent = `${data.coverage_pct ?? "—"}%`;
+          if (elLvl) elLvl.textContent = `Mức: ${foamLevelLabel(data.level)}`;
+          if (elPx) elPx.textContent = `${data.foam_pixels ?? 0} / ${data.roi_pixels ?? 0} px`;
+          if (elLat) elLat.textContent = `Thời gian: ${data.latency_ms ?? "—"} ms`;
+          if (elWat) elWat.textContent = data.water?.pigment_label || "—";
+          if (elCla) elCla.textContent = `Độ trong: ${data.water?.clarity_score ?? "—"}%`;
+          if (elDeb) elDeb.textContent = `${data.debris?.count ?? 0} vật thể · Váng dầu ${data.debris?.oil_sheen_pct ?? 0}%`;
+          if (elScn) elScn.textContent = (data.scenarios && data.scenarios[0]?.title) || "—";
+
+          showStillFeedback(
+            `Hoàn tất "${file.name}": Bọt ${data.coverage_pct}% (${foamLevelLabel(data.level)}), thời gian ${data.latency_ms} ms.`,
+            false
+          );
+        } catch (err) {
+          showStillFeedback(`Lỗi kết nối máy chủ: ${err?.message || err}`, true);
+        } finally {
+          elBtnStillRun.disabled = false;
+          setBtnLabel(elBtnStillRun, "Phân tích ảnh tĩnh", "Analyze Image");
+        }
+      });
     }
 
     if (elBtnLabRun && elLabFileInput) {

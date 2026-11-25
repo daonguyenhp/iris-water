@@ -42,6 +42,10 @@
             <span class="vi">Bể Sinh học</span>
             <span class="en">Biological</span>
           </button>
+          <button type="button" class="nav-tab-btn" data-app-tab="still">
+            <span class="vi">Xử lý ảnh tĩnh</span>
+            <span class="en">Still Image</span>
+          </button>
           <button type="button" class="nav-tab-btn" data-app-tab="lab">
             <span class="vi">Kiểm tra ảnh &amp; video</span>
             <span class="en">File Analyzer</span>
@@ -266,9 +270,18 @@
               <div class="viewport-stage mode-live" id="viewport-stage">
                 <div class="video-container" id="video-container">
                   <img id="live-video-stream" alt="Basin stream">
+                  <canvas id="roi-draw-canvas" class="roi-draw-canvas"></canvas>
+                  <div class="roi-unselected-notice" id="roi-unselected-notice" style="display:none;">
+                    <span class="vi">Chưa chọn vùng mặt nước — Kéo chuột vẽ 1 ô chữ nhật trên hình để khoanh vùng nhận diện bọt</span>
+                    <span class="en">Water region not selected — Drag a rectangle on the video to enable foam detection</span>
+                  </div>
                   <div class="hud-corner-tl">
                     <span class="hud-chip" id="overlay-basin-chip">Bể sinh học Hiếu khí</span>
                     <span class="hud-chip hud-chip-muted" id="roi-assumption-tag">Khung bể chữ nhật</span>
+                    <button type="button" class="btn-clear-roi" id="btn-clear-roi" style="display:none;">
+                      <span class="vi">Xóa vùng</span>
+                      <span class="en">Clear ROI</span>
+                    </button>
                   </div>
                   <div class="video-overlay-ts" id="video-overlay-ts"></div>
                   <div class="video-overlay-camtag" id="video-overlay-camtag">CAM-01</div>
@@ -787,6 +800,103 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           TAB: XỬ LÝ ẢNH TĨNH (Dedicated Still Image Segmentation)
+           ==================================================================== -->
+      <div class="app-tab-view" id="tab-view-still" data-tab-panel="still">
+        <div class="focused-stage-container">
+          <section class="soft-card lab-studio-card">
+            <div class="pane-toolbar">
+              <span class="pane-section-title">
+                <span class="vi">Xử lý &amp; Phân đoạn Ảnh Tĩnh (Nước + Bọt)</span>
+                <span class="en">Still Image Segmentation (Water + Foam)</span>
+              </span>
+              <span class="source-tag">CPU · 2-Stage Bundle</span>
+            </div>
+
+            <div class="fancy-dropzone-area">
+              <div class="dropzone-info">
+                <h3>
+                  <span class="vi">Tải lên ảnh tĩnh mặt bể để phân tích chi tiết</span>
+                  <span class="en">Upload a Static Basin Image for Detailed Analysis</span>
+                </h3>
+                <p>
+                  <span class="vi">Hệ thống tách vùng mặt nước (xanh lam) và vùng bọt nổi (theo mức cảnh báo), đồng thời hiển thị đối chiếu ảnh gốc – ảnh kết quả.</span>
+                  <span class="en">Segments the water surface (blue) and foam regions (level-colored), displaying a side-by-side original vs. result comparison.</span>
+                </p>
+              </div>
+              <div class="dropzone-action-row">
+                <label class="file-picker-pill" for="still-file-input">
+                  <input type="file" id="still-file-input" accept="image/*" class="cam-input">
+                </label>
+                <label class="fancy-check-row" style="margin:0;">
+                  <input type="checkbox" id="still-log-event">
+                  <span class="vi">Ghi nhật ký nếu vượt ngưỡng</span>
+                  <span class="en">Log event if over threshold</span>
+                </label>
+                <button type="button" class="btn-gradient-primary" id="btn-still-run">
+                  <span class="vi">Phân tích ảnh tĩnh</span>
+                  <span class="en">Analyze Image</span>
+                </button>
+              </div>
+              <div id="still-feedback" class="settings-feedback" style="display:none;"></div>
+            </div>
+
+            <div class="still-compare-grid">
+              <div class="still-img-box">
+                <div class="still-img-header">
+                  <span class="vi">Ảnh gốc</span>
+                  <span class="en">Original Image</span>
+                </div>
+                <div class="still-img-frame">
+                  <img id="still-orig-img" alt="Original still image" style="display:none;">
+                  <span id="still-orig-placeholder" class="still-placeholder">
+                    <span class="vi">Chưa chọn ảnh</span>
+                    <span class="en">No image selected</span>
+                  </span>
+                </div>
+              </div>
+              <div class="still-img-box">
+                <div class="still-img-header">
+                  <span class="vi">Kết quả phân đoạn (Nước &amp; Bọt)</span>
+                  <span class="en">Segmentation Result (Water &amp; Foam)</span>
+                </div>
+                <div class="still-img-frame">
+                  <img id="still-result-img" alt="Segmentation result" style="display:none;">
+                  <span id="still-result-placeholder" class="still-placeholder">
+                    <span class="vi">Bấm "Phân tích ảnh tĩnh" để xem mask</span>
+                    <span class="en">Click "Analyze Image" to view mask</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="still-metrics-grid">
+              <div class="spec-audit-cell">
+                <span class="audit-code"><span class="vi">Tỷ lệ bọt / mặt nước</span><span class="en">Foam / Water Ratio</span></span>
+                <strong id="still-val-coverage">—</strong>
+                <p id="still-val-level">Đang chờ…</p>
+              </div>
+              <div class="spec-audit-cell">
+                <span class="audit-code"><span class="vi">Pixel nước / bọt &amp; Thời gian</span><span class="en">Water / Foam Pixels &amp; Latency</span></span>
+                <strong id="still-val-pixels">—</strong>
+                <p id="still-val-latency">—</p>
+              </div>
+              <div class="spec-audit-cell">
+                <span class="audit-code"><span class="vi">Màu nước &amp; Độ trong</span><span class="en">Water Color &amp; Clarity</span></span>
+                <strong id="still-val-water">—</strong>
+                <p id="still-val-clarity">—</p>
+              </div>
+              <div class="spec-audit-cell">
+                <span class="audit-code"><span class="vi">Rác nổi &amp; Váng dầu</span><span class="en">Debris &amp; Oil Sheen</span></span>
+                <strong id="still-val-debris">—</strong>
+                <p id="still-val-scenario">—</p>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -13,11 +14,28 @@ from src.utils.config import load_config
 from src.vision.foam_coverage import FoamCoverageResult, estimate_foam_coverage, imwrite_unicode
 
 
+def _resolve_video_step(
+    video_fps: float,
+    total_frames: int,
+    every_n_frames: Optional[int],
+    max_frames: int,
+    target_sample_fps: float,
+) -> int:
+    """Choose frame stride from video FPS, duration, and target model sampling FPS."""
+    if every_n_frames is not None and every_n_frames > 0:
+        return int(every_n_frames)
+    base_step = max(1, round(video_fps / max(0.5, target_sample_fps)))
+    if total_frames > 0:
+        even_step = max(1, math.ceil(total_frames / max(1, max_frames)))
+        return max(base_step, even_step)
+    return base_step
+
+
 def process_foam_video(
     video_path: Path,
     *,
-    every_n_frames: int = 15,
-    max_frames: int = 40,
+    every_n_frames: Optional[int] = None,
+    max_frames: Optional[int] = None,
     cfg: Optional[Dict[str, Any]] = None,
     save_overlays: bool = True,
 ) -> Dict[str, Any]:
@@ -26,6 +44,10 @@ def process_foam_video(
     Returns summary + per-frame metrics. Errors are structured (not silent normal).
     """
     foam_cfg = cfg or load_config("foam.yaml")
+    sampling_cfg = foam_cfg.get("video_sampling", {})
+    eff_max_frames = int(max_frames) if (max_frames is not None and max_frames > 0) else int(sampling_cfg.get("max_frames", 60))
+    target_sample_fps = float(sampling_cfg.get("target_fps", 6.0))
+
     t0 = time.perf_counter()
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -38,6 +60,7 @@ def process_foam_video(
 
     fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0) or 25.0
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    step = _resolve_video_step(fps, total, every_n_frames, eff_max_frames, target_sample_fps)
     out_dir = Path(
         foam_cfg.get("output", {}).get("overlay_dir", "data/foam/overlays")
     )
@@ -55,11 +78,11 @@ def process_foam_video(
     idx = 0
     sampled = 0
 
-    while sampled < max_frames:
+    while sampled < eff_max_frames:
         ok, frame = cap.read()
         if not ok:
             break
-        if idx % max(1, every_n_frames) != 0:
+        if idx % step != 0:
             idx += 1
             continue
         result: FoamCoverageResult = estimate_foam_coverage(
@@ -130,5 +153,6 @@ def process_foam_video(
         "elapsed_ms": round(elapsed_ms, 1),
         "video_fps": fps,
         "video_frames": total,
-        "every_n_frames": every_n_frames,
+        "every_n_frames": step,
+        "sampling_strategy": "manual" if (every_n_frames and every_n_frames > 0) else "adaptive_fps",
     }
