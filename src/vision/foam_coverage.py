@@ -423,7 +423,7 @@ def estimate_foam_coverage(
             cfg=foam_cfg,
             water_mask=water_mask,
         )
-        debris_items = (surface_analysis.get("debris") or {}).get("items") or []
+        debris_items: list[Dict[str, Any]] = []
         latency_ms = (time.perf_counter() - t0) * 1000.0
         overlay = (
             _draw_overlay(

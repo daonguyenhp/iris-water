@@ -412,7 +412,13 @@ def analyze_basin_surface(
 
     water_info = analyze_water_color_and_clarity(roi_bgr, non_foam_mask, cfg)
     sludge_info = analyze_sludge_and_bubbles(roi_bgr, foam_mask, coverage_pct)
-    debris_info, debris_items = detect_floating_debris_and_sheen(roi_bgr, foam_mask, roi_box, cfg)
+    debris_info = {
+        "count": 0,
+        "oil_sheen_pct": 0.0,
+        "level": "normal",
+        "summary": "Không bật nhận diện rác nổi",
+    }
+    debris_items: List[Dict[str, Any]] = []
     scenarios = evaluate_operational_scenarios(
         coverage_pct, foam_level, water_info, sludge_info, debris_info
     )
